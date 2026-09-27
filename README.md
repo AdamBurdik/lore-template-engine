@@ -13,6 +13,14 @@ The config is split into three layers:
 
 ---
 
+## KDL
+
+All config definitions are using kdl document language.
+
+More info at https://kdl.dev
+
+---
+
 ## Variables
 
 A variable represents one value pulled from an item.
@@ -239,7 +247,7 @@ appended at the end.
 
 ## Applying a template to an item
 
-Items reference their template via a single PDC tag (`your_namespace:template_id`). Whenever that item changes in a way
+Items reference their template via a single PDC tag (`template_id`). Whenever that item changes in a way
 that should affect lore (enchanted, crafted, repaired, or set manually via command), the plugin rebuilds the lore from
 the current template + current PDC/item data.
 
