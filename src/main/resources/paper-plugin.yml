@@ -1,0 +1,6 @@
+name: LTE
+version: "0.1.0"
+main: me.adamix.lte.LTEPlugin
+description: Lore Template Engine
+api-version: '26.1.2'
+dependencies: {}

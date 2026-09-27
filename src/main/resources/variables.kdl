@@ -1,0 +1,17 @@
+variable "rarity" {
+    source "pdc" key="rarity"
+    lookup {
+        "common"    "<gray>Common"
+        "uncommon"  "<green>Uncommon"
+        "rare"      "<blue>Rare"
+        "epic"      "<light_purple><bold>Epic"
+        "legendary" "<gold><bold>Legendary"
+    }
+    fallback "<gray>Unknown"
+    default "<gray>Common"
+}
+
+variable "item_level" {
+    source "pdc" key="item_level" type="int"
+    default "1"
+}

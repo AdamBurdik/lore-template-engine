@@ -1,0 +1,56 @@
+group "enchantments" {
+	builtin "enchantments"
+// exposes: <ench_name>, <ench_level>, <ench_level_roman>
+}
+
+group "attributes" {
+	builtin "attributes"
+// exposes: <attr_name>, <attr_value>, <attr_slot>, <attr_color>
+}
+
+group "attributes-any" {
+	builtin "attributes" slot="any"
+// exposes: <attr_name>, <attr_value>, <attr_slot>, <attr_color> (When Equipped)
+}
+
+group "attributes-main-hand" {
+	builtin "attributes" slot="main-hand"
+// exposes: <attr_name>, <attr_value>, <attr_slot>, <attr_color> (When in Main Hand)
+}
+
+group "attributes-off-hand" {
+	builtin "attributes" slot="off-hand"
+// exposes: <attr_name>, <attr_value>, <attr_slot>, <attr_color> (When in Off Hand)
+}
+
+group "attributes-head" {
+	builtin "attributes" slot="head"
+// exposes: <attr_name>, <attr_value>, <attr_slot>, <attr_color>
+}
+
+group "attributes-chest" {
+	builtin "attributes" slot="chest"
+// exposes: <attr_name>, <attr_value>, <attr_slot>, <attr_color>
+}
+
+group "attributes-legs" {
+	builtin "attributes" slot="legs"
+// exposes: <attr_name>, <attr_value>, <attr_slot>, <attr_color>
+}
+
+group "attributes-feet" {
+	builtin "attributes" slot="feet"
+// exposes: <attr_name>, <attr_value>, <attr_slot>, <attr_color>
+}
+
+group "tags" {
+	source "pdc" key="tags" type="string_list"
+	value-name "tag"
+// exposes: <tag>
+}
+
+group "description" {
+	source "pdc" key="description" type="string_list"
+	value-name "line"
+// exposes: <line>
+}
