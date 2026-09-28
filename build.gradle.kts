@@ -23,6 +23,13 @@ repositories {
 dependencies {
     compileOnly("io.papermc.paper:paper-api:26.1.2.build.+")
     paperweight.paperDevBundle("26.1.2.build.+")
+
+    compileOnly("org.jetbrains:annotations:26.1.0")
+
+    // Explicitly retain SpotBugs AND add JetBrains annotations to its runtime
+    spotbugs("com.github.spotbugs:spotbugs:4.10.4")
+    spotbugs("org.jetbrains:annotations:26.1.0")
+    
     spotbugsPlugins("com.h3xstream.findsecbugs:findsecbugs-plugin:1.14.0")
     compileOnly("org.projectlombok:lombok:1.18.48")
     annotationProcessor("org.projectlombok:lombok:1.18.48")

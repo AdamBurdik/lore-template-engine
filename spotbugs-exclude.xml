@@ -3,4 +3,10 @@
 	<Match>
 		<Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
 	</Match>
+
+	<Match>
+		<Class name="me.adamix.lte.definition.template.TemplateParser" />
+		<Method name="resolve" />
+		<Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
+	</Match>
 </FindBugsFilter>

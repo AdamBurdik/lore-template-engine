@@ -43,7 +43,8 @@ public class ItemListener implements Listener {
         ItemStack result = event.getInventory().getResult();
         if (result == null) return;
 
-        ItemStack templatedIngredient = findTemplatedIngredient(event.getInventory().getMatrix());
+        ItemStack[] matrix = event.getInventory().getMatrix();
+        ItemStack templatedIngredient = findTemplatedIngredient(matrix);
         if (templatedIngredient != null) {
             copyLoreData(templatedIngredient, result);
         }
