@@ -53,7 +53,7 @@ public class LTECommand extends BaseCommand {
         }
 
         lifecycleService.rebuildPlayer(player);
-        sender.sendMessage("Rebuilt $" + player.getName() + "'s templated items!");
+        sender.sendMessage("Rebuilt " + player.getName() + "'s templated items!");
     }
     
     @Subcommand("set template")

@@ -6,6 +6,7 @@ import dev.kdl.parse.KdlParseException;
 import dev.kdl.parse.KdlParser;
 import me.adamix.lte.exception.TemplateParsingException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -53,11 +54,20 @@ public class TemplateParser {
                 extendsId = (String) extendsProperty.get().value();
             }
 
+            String tooltipStyle = null;
+            var styleProperty = node.getProperty("tooltip-style");
+            if (styleProperty.isPresent()) {
+                if (!styleProperty.get().isString()) {
+                    throw new TemplateParsingException("Template 'tooltip-style' property must be a string");
+                }
+                tooltipStyle = (String) styleProperty.get().value();
+            }
+
             for (KdlNode child : node.children()) {
                 elements.add(kdlToElement(child));
             }
 
-            templates.add(new LoreTemplateDefinition(id, elements, extendsId));
+            templates.add(new LoreTemplateDefinition(id, elements, extendsId, tooltipStyle));
         }
 
         return resolveExtensions(templates);
@@ -69,25 +79,25 @@ public class TemplateParser {
             byId.put(template.id(), template);
         }
 
-        Map<String, List<TemplateElement>> resolved = new HashMap<>();
+        Map<String, Resolved> resolved = new HashMap<>();
         Set<String> visiting = new HashSet<>();
 
         List<LoreTemplateDefinition> result = new ArrayList<>();
         for (LoreTemplateDefinition template : templates) {
-            List<TemplateElement> elements = collectElements(template.id(), byId, resolved, visiting);
-            result.add(new LoreTemplateDefinition(template.id(), elements, null));
+            Resolved r = resolve(template.id(), byId, resolved, visiting);
+            result.add(new LoreTemplateDefinition(template.id(), r.elements(), null, r.tooltipStyle()));
         }
 
         return result;
     }
 
-    private @NotNull List<TemplateElement> collectElements(
+    private @NotNull Resolved resolve(
             @NotNull String id,
             @NotNull Map<String, LoreTemplateDefinition> byId,
-            @NotNull Map<String, List<TemplateElement>> resolved,
+            @NotNull Map<String, Resolved> resolved,
             @NotNull Set<String> visiting
     ) throws TemplateParsingException {
-        List<TemplateElement> cached = resolved.get(id);
+        Resolved cached = resolved.get(id);
         if (cached != null) {
             return cached;
         }
@@ -102,21 +112,29 @@ public class TemplateParser {
         }
 
         List<TemplateElement> elements = new ArrayList<>();
+        String tooltipStyle = template.tooltipStyle();   // child's own value wins
+
         if (template.extendsId() != null) {
-            LoreTemplateDefinition parent = byId.get(template.extendsId());
-            if (parent == null) {
+            if (!byId.containsKey(template.extendsId())) {
                 visiting.remove(id);
                 throw new TemplateParsingException(
                         "Template '" + id + "' extends unknown template '" + template.extendsId() + "'"
                 );
             }
-            elements.addAll(collectElements(parent.id(), byId, resolved, visiting));
+
+            Resolved parent = resolve(template.extendsId(), byId, resolved, visiting);
+            elements.addAll(parent.elements());
+
+            if (tooltipStyle == null) {
+                tooltipStyle = parent.tooltipStyle();
+            }
         }
         elements.addAll(template.elements());
 
         visiting.remove(id);
-        resolved.put(id, List.copyOf(elements));
-        return elements;
+        Resolved out = new Resolved(List.copyOf(elements), tooltipStyle);
+        resolved.put(id, out);
+        return out;
     }
 
     public @NotNull TemplateElement kdlToElement(@NotNull KdlNode node) throws TemplateParsingException {
@@ -245,5 +263,11 @@ public class TemplateParser {
             }
             default -> throw new TemplateParsingException("Unknown template element: " + name);
         };
+    }
+
+    private record Resolved(
+            @NotNull List<TemplateElement> elements,
+            @Nullable String tooltipStyle
+    ) {
     }
 }

@@ -243,6 +243,18 @@ template "vanilla_extended" extends="vanilla" {
 This renders everything from `vanilla`, then the description block, then rarity, in that order, since new nodes are
 appended at the end.
 
+### Resourcepack integration
+
+`tooltip-style` applies tooltip-style data component to the item:
+
+```kdl
+template "vanilla_extended" extends="vanilla" tooltip-style="simple" {
+	blank collapse-if-empty="description"
+	group "description" each="<gray><line>" empty="skip"
+	var "rarity"
+}
+```
+
 ---
 
 ## Applying a template to an item
@@ -263,3 +275,7 @@ the current template + current PDC/item data.
 
 ![extended-vanilla-showcase](./github/extended-vanilla.png)
 ![weapon-default-showcase](./github/weapon-default.png)
+
+![extended-vanilla-tooltip-style](./github/extended-vanilla-tooltip-style.png)
+
+Tooltip texture source: [modrinth.com/resourcepack/simple-tooltip](https://modrinth.com/resourcepack/simple-tooltip)

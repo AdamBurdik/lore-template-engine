@@ -6,6 +6,7 @@ import me.adamix.lte.definition.group.ResolvedGroup;
 import me.adamix.lte.definition.template.LoreTemplateDefinition;
 import me.adamix.lte.definition.template.TemplateElement;
 import me.adamix.lte.registry.TemplateRegistry;
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
@@ -80,6 +81,11 @@ public class TemplateService {
                 ))
                 .build()
         );
+
+        String style = template.tooltipStyle();
+        if (style != null) {
+            itemStack.setData(DataComponentTypes.TOOLTIP_STYLE, Key.key(style));
+        }
     }
 
     private @NotNull List<Component> parse(
@@ -107,7 +113,7 @@ public class TemplateService {
                             break;
                         }
                     }
-                    
+
                     lore.add(
                             LTEPlugin.MINI_MESSAGE.deserialize("<!italic><white>" + value)
                     );
@@ -137,7 +143,8 @@ public class TemplateService {
 
                     if (resolved.isEmpty()) {
                         switch (empty) {
-                            case TemplateElement.Group.Empty.Skip _ -> {}
+                            case TemplateElement.Group.Empty.Skip _ -> {
+                            }
                         }
                         continue;
                     }
