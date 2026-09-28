@@ -10,15 +10,20 @@ import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import net.minecraft.util.datafix.fixes.ItemStackTagFix;
+import org.apache.commons.lang3.NotImplementedException;
 import org.bukkit.NamespacedKey;
+import org.bukkit.craftbukkit.legacy.reroute.NotInBukkit;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.Set;
 
 @SuppressWarnings("UnstableApiUsage")
@@ -42,6 +47,10 @@ public class TemplateService {
         this.groupService = groupService;
         this.pdcKey = new NamespacedKey(plugin, "template_id");
     }
+    
+    public @NotNull Optional<String> getTemplateId(@NotNull ItemStack itemStack) {
+        return Optional.ofNullable(itemStack.getPersistentDataContainer().get(pdcKey, PersistentDataType.STRING));
+    }
 
     public void rebuild(@NotNull ItemStack itemStack) {
         var pdc = itemStack.getPersistentDataContainer();
@@ -49,6 +58,16 @@ public class TemplateService {
         if (templateId == null) return;
 
         apply(templateId, itemStack);
+    }
+    
+    public @NotNull List<Component> render(@NotNull ItemStack itemStack, @NotNull String templateId) {
+        var opt = registry.get(templateId);
+        if (opt.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        LoreTemplateDefinition template = opt.get();
+        return parse(template, itemStack);
     }
 
     public void apply(
@@ -175,5 +194,9 @@ public class TemplateService {
         }
 
         return lore;
+    }
+    
+    public void clear(@NotNull ItemStack itemStack) {
+        throw new NotImplementedException("TemplateService#clear not implemented yet");
     }
 }

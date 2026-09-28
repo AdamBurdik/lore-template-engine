@@ -11,15 +11,12 @@ import me.adamix.lte.GroupService;
 import me.adamix.lte.LTEPlugin;
 import me.adamix.lte.LifecycleService;
 import me.adamix.lte.TemplateService;
-import me.adamix.lte.definition.group.GroupDefinition;
-import me.adamix.lte.definition.variable.VariableDefinition;
-import me.adamix.lte.registry.GroupRegistry;
-import me.adamix.lte.registry.VariableRegistry;
-import org.bukkit.NamespacedKey;
+import me.adamix.lte.VariableService;
+import me.adamix.lte.api.exception.DefinitionNotFoundException;
+import me.adamix.lte.api.exception.NotPdcBackedException;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,8 +29,8 @@ public class LTECommand extends BaseCommand {
     private final LTEPlugin plugin;
     private final TemplateService templateService;
     private final LifecycleService lifecycleService;
-    private final VariableRegistry variableRegistry;
-    private final GroupRegistry groupRegistry;
+    private final VariableService variableService;
+    private final GroupService groupService;
     
     @Subcommand("reload")
     @CommandPermission("lte.command.reload")
@@ -67,23 +64,14 @@ public class LTECommand extends BaseCommand {
     @Subcommand("set variable")
     @CommandCompletion("@variables @variableLookupValues")
     public void setVariable(@NotNull Player player, @NotNull String name, @NotNull String value) {
-        var definitionOpt = variableRegistry.get(name);
-        if (definitionOpt.isEmpty()) {
-            player.sendMessage("Unknown variable: " + name);
-            return;
-        }
-
-        var source = definitionOpt.get().source();
-        if (!(source instanceof VariableDefinition.Source.PDC(String key))) {
-            player.sendMessage("Variable '" + name + "' is not PDC-backed and cannot be set");
-            return;
-        }
-
         ItemStack itemStack = player.getInventory().getItemInMainHand();
-        itemStack.editMeta(meta -> {
-            var container = meta.getPersistentDataContainer();
-            container.set(new NamespacedKey(plugin, "variable_" + key), PersistentDataType.STRING, value);
-        });
+
+        try {
+            variableService.set(itemStack, name, value);
+        } catch (DefinitionNotFoundException | NotPdcBackedException e) {
+            player.sendMessage(e.getMessage());
+            return;
+        }
 
         templateService.rebuild(itemStack);
         player.sendMessage("Set variable '" + name + "' to '" + value + "'");
@@ -92,25 +80,16 @@ public class LTECommand extends BaseCommand {
     @Subcommand("set group")
     @CommandCompletion("@groups")
     public void setGroup(@NotNull Player player, @NotNull String name, @NotNull String... args) {
-        var definitionOpt = groupRegistry.get(name);
-        if (definitionOpt.isEmpty()) {
-            player.sendMessage("Unknown group: " + name);
-            return;
-        }
-
-        var source = definitionOpt.get().source();
-        if (!(source instanceof GroupDefinition.Source.PDC pdcSource)) {
-            player.sendMessage("Group '" + name + "' is not PDC-backed and cannot be set");
-            return;
-        }
-
         List<String> values = splitLines(String.join(" ", args));
 
         ItemStack itemStack = player.getInventory().getItemInMainHand();
-        itemStack.editMeta(meta -> {
-            var container = meta.getPersistentDataContainer();
-            container.set(new NamespacedKey(plugin, "group_" + pdcSource.key()), PersistentDataType.STRING, GroupService.encodeList(values));
-        });
+
+        try {
+            groupService.set(itemStack, name, values);
+        } catch (DefinitionNotFoundException | NotPdcBackedException e) {
+            player.sendMessage(e.getMessage());
+            return;
+        }
 
         templateService.rebuild(itemStack);
         player.sendMessage("Set group '" + name + "' to " + values.size() + " value(s)");

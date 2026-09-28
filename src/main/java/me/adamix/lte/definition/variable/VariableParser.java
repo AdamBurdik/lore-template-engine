@@ -4,7 +4,7 @@ import dev.kdl.KdlDocument;
 import dev.kdl.KdlNode;
 import dev.kdl.parse.KdlParseException;
 import dev.kdl.parse.KdlParser;
-import me.adamix.lte.exception.TemplateParsingException;
+import me.adamix.lte.api.exception.TemplateParsingException;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;

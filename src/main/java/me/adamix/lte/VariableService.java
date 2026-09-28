@@ -2,6 +2,8 @@ package me.adamix.lte;
 
 import lombok.RequiredArgsConstructor;
 import me.adamix.lte.definition.variable.VariableDefinition;
+import me.adamix.lte.api.exception.DefinitionNotFoundException;
+import me.adamix.lte.api.exception.NotPdcBackedException;
 import me.adamix.lte.registry.VariableRegistry;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
@@ -15,6 +17,23 @@ import java.util.Optional;
 public class VariableService {
     private final LTEPlugin plugin;
     private final VariableRegistry variableRegistry;
+
+    public void set(@NotNull ItemStack itemStack, @NotNull String name, @NotNull String value) {
+        var definitionOpt = variableRegistry.get(name);
+        if (definitionOpt.isEmpty()) {
+            throw new DefinitionNotFoundException("Unknown variable: " + name);
+        }
+
+        var source = definitionOpt.get().source();
+        if (!(source instanceof VariableDefinition.Source.PDC(String key))) {
+            throw new NotPdcBackedException("Variable '" + name + "' is not PDC-backed and cannot be set");
+        }
+
+        itemStack.editMeta(meta -> {
+            var container = meta.getPersistentDataContainer();
+            container.set(new NamespacedKey(plugin, "variable_" + key), PersistentDataType.STRING, value);
+        });
+    }
 
     public @NotNull Optional<String> getValue(
             @NotNull String name,

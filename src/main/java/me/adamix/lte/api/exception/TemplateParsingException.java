@@ -1,4 +1,4 @@
-package me.adamix.lte.exception;
+package me.adamix.lte.api.exception;
 
 public class TemplateParsingException extends Exception {
     public TemplateParsingException() {

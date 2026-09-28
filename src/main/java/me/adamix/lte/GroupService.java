@@ -6,6 +6,8 @@ import io.papermc.paper.datacomponent.item.attribute.AttributeModifierDisplay;
 import lombok.RequiredArgsConstructor;
 import me.adamix.lte.definition.group.GroupDefinition;
 import me.adamix.lte.definition.group.ResolvedGroup;
+import me.adamix.lte.api.exception.DefinitionNotFoundException;
+import me.adamix.lte.api.exception.NotPdcBackedException;
 import me.adamix.lte.registry.GroupRegistry;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
@@ -150,6 +152,23 @@ public class GroupService {
         }
 
         return new ResolvedGroup(elements);
+    }
+
+    public void set(@NotNull ItemStack itemStack, @NotNull String name, @NotNull List<String> values) {
+        var definitionOpt = groupRegistry.get(name);
+        if (definitionOpt.isEmpty()) {
+            throw new DefinitionNotFoundException("Unknown group: " + name);
+        }
+
+        var source = definitionOpt.get().source();
+        if (!(source instanceof GroupDefinition.Source.PDC pdcSource)) {
+            throw new NotPdcBackedException("Group '" + name + "' is not PDC-backed and cannot be set");
+        }
+
+        itemStack.editMeta(meta -> {
+            var container = meta.getPersistentDataContainer();
+            container.set(new NamespacedKey(plugin, "group_" + pdcSource.key()), PersistentDataType.STRING, encodeList(values));
+        });
     }
 
     public static @NotNull String encodeList(@NotNull List<String> values) {
