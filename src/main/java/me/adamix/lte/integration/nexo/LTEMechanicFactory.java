@@ -3,7 +3,6 @@ package me.adamix.lte.integration.nexo;
 import com.nexomc.nexo.api.NexoItems;
 import com.nexomc.nexo.mechanics.Mechanic;
 import com.nexomc.nexo.mechanics.MechanicFactory;
-import me.adamix.lte.api.LoreTemplateAPI;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;

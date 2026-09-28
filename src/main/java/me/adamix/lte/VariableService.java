@@ -1,9 +1,9 @@
 package me.adamix.lte;
 
 import lombok.RequiredArgsConstructor;
-import me.adamix.lte.definition.variable.VariableDefinition;
 import me.adamix.lte.api.exception.DefinitionNotFoundException;
 import me.adamix.lte.api.exception.NotPdcBackedException;
+import me.adamix.lte.definition.variable.VariableDefinition;
 import me.adamix.lte.registry.VariableRegistry;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
