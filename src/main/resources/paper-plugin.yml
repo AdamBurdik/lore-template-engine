@@ -3,4 +3,9 @@ version: "0.2.1"
 main: me.adamix.lte.LTEPlugin
 description: Lore Template Engine
 api-version: '26.1.2'
-dependencies: {}
+dependencies:
+  server:
+    Nexo:
+      load: BEFORE
+      required: false
+      join-classpath: true

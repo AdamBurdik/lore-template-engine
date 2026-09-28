@@ -12,6 +12,7 @@ import me.adamix.lte.definition.template.TemplateParser;
 import me.adamix.lte.definition.variable.VariableDefinition;
 import me.adamix.lte.definition.variable.VariableParser;
 import me.adamix.lte.editor.ItemEditorImpl;
+import me.adamix.lte.integration.nexo.NexoIntegration;
 import me.adamix.lte.listener.ItemListener;
 import me.adamix.lte.listener.PlayerListener;
 import me.adamix.lte.registry.GroupRegistry;
@@ -110,8 +111,15 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
 
         Bukkit.getPluginManager().registerEvents(new ItemListener(this, templateService), this);
         Bukkit.getPluginManager().registerEvents(new PlayerListener(lifecycleService), this);
-        
         reload();
+
+        attemptNexoIntegration();
+    }
+    
+    private void attemptNexoIntegration() {
+        if (getServer().getPluginManager().isPluginEnabled("Nexo")) {
+            new NexoIntegration(this, this).enable();
+        }
     }
     
     @Override

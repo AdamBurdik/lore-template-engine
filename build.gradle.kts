@@ -18,6 +18,7 @@ repositories {
     }
     maven { url = uri("https://jitpack.io") }
     maven { url = uri("https://repo.aikar.co/content/groups/aikar/") }
+    maven("https://repo.nexomc.com/releases")
 }
 
 dependencies {
@@ -36,6 +37,9 @@ dependencies {
     compileOnly("net.dmulloy2:ProtocolLib:5.4.0")
     implementation("com.github.kdl-org:kdl4j:v1.0.1")
     implementation("co.aikar:acf-paper:0.5.1-SNAPSHOT")
+
+    // Integrations
+    compileOnly("com.nexomc:nexo:1.25.0")
 }
 
 tasks {

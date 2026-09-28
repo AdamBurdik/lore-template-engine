@@ -1,6 +1,5 @@
 package me.adamix.lte.api;
 
-import io.papermc.paper.configuration.transformation.global.versioned.V30_PacketIds;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
