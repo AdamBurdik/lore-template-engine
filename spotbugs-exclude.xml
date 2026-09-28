@@ -9,4 +9,10 @@
 		<Method name="resolve" />
 		<Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
 	</Match>
+
+	<Match>
+		<Class name="me.adamix.lte.listener.ItemListener" />
+		<Method name="findTemplatedIngredient" />
+		<Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
+	</Match>
 </FindBugsFilter>
