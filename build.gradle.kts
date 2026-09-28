@@ -58,3 +58,7 @@ spotbugs {
     toolVersion = "4.10.4"
     excludeFilter.set(rootProject.file("spotbugs-exclude.xml"))
 }
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
