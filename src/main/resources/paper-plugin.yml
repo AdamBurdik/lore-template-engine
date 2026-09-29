@@ -1,5 +1,5 @@
 name: LTE
-version: "0.3.0"
+version: "0.4.0"
 main: me.adamix.lte.LTEPlugin
 description: Lore Template Engine
 api-version: '26.1.2'

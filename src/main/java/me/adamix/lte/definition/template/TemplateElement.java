@@ -23,4 +23,4 @@ public sealed interface TemplateElement {
         }
     }
     record Insert(@NotNull String sectionName) implements TemplateElement {}
-}
+} 
