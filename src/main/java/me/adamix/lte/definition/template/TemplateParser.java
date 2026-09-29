@@ -21,7 +21,6 @@ public class TemplateParser {
     public @NotNull List<LoreTemplateDefinition> parseFile(@NotNull Path path) throws KdlParseException, IOException, TemplateParsingException {
         var parser = KdlParser.v2();
         var document = parser.parse(path);
-
         return kdlToTemplates(document);
     }
 
@@ -29,20 +28,16 @@ public class TemplateParser {
         List<LoreTemplateDefinition> templates = new ArrayList<>();
 
         for (KdlNode node : document.nodes()) {
-
             String name = node.name();
             if (!name.equals("template")) continue;
 
-            List<TemplateElement> elements = new ArrayList<>();
             if (node.arguments().isEmpty()) {
                 throw new TemplateParsingException("Template requires at least one argument to act as an ID");
             }
-
             var argument = node.arguments().getFirst();
             if (!argument.isString()) {
                 throw new TemplateParsingException("Template id must be string");
             }
-
             String id = (String) argument.value();
 
             String extendsId = null;
@@ -63,14 +58,24 @@ public class TemplateParser {
                 tooltipStyle = (String) styleProperty.get().value();
             }
 
+            Map<String, List<TemplateElement>> sections = new HashMap<>();
+            List<TemplateElement> elements = new ArrayList<>();
             for (KdlNode child : node.children()) {
-                elements.add(kdlToElement(child));
+                elements.addAll(kdlToElement(child, sections));
             }
 
-            templates.add(new LoreTemplateDefinition(id, elements, extendsId, tooltipStyle));
+            if (extendsId == null && containsInsert(elements)) {
+                throw new TemplateParsingException("Template '" + id + "' uses 'insert' but does not extend anything");
+            }
+
+            templates.add(new LoreTemplateDefinition(id, elements, extendsId, tooltipStyle, sections));
         }
 
         return resolveExtensions(templates);
+    }
+
+    private static boolean containsInsert(@NotNull List<TemplateElement> elements) {
+        return elements.stream().anyMatch(e -> e instanceof TemplateElement.Insert);
     }
 
     private @NotNull List<LoreTemplateDefinition> resolveExtensions(@NotNull List<LoreTemplateDefinition> templates) throws TemplateParsingException {
@@ -85,7 +90,7 @@ public class TemplateParser {
         List<LoreTemplateDefinition> result = new ArrayList<>();
         for (LoreTemplateDefinition template : templates) {
             Resolved r = resolve(template.id(), byId, resolved, visiting);
-            result.add(new LoreTemplateDefinition(template.id(), r.elements(), null, r.tooltipStyle()));
+            result.add(new LoreTemplateDefinition(template.id(), r.elements(), null, r.tooltipStyle(), r.sections()));
         }
 
         return result;
@@ -111,8 +116,9 @@ public class TemplateParser {
             throw new TemplateParsingException("Unknown template '" + id + "'");
         }
 
-        List<TemplateElement> elements = new ArrayList<>();
         String tooltipStyle = template.tooltipStyle();   // child's own value wins
+        Map<String, List<TemplateElement>> combinedSections = new HashMap<>(template.sections());
+        List<TemplateElement> finalElements;
 
         if (template.extendsId() != null) {
             if (!byId.containsKey(template.extendsId())) {
@@ -123,101 +129,117 @@ public class TemplateParser {
             }
 
             Resolved parent = resolve(template.extendsId(), byId, resolved, visiting);
-            elements.addAll(parent.elements());
 
             if (tooltipStyle == null) {
                 tooltipStyle = parent.tooltipStyle();
             }
+
+            for (var entry : parent.sections().entrySet()) {
+                combinedSections.putIfAbsent(entry.getKey(), entry.getValue());
+            }
+
+            if (containsInsert(template.elements())) {
+                finalElements = new ArrayList<>();
+                for (TemplateElement element : template.elements()) {
+                    if (element instanceof TemplateElement.Insert(String sectionName)) {
+                        List<TemplateElement> sectionContent = parent.sections().get(sectionName);
+                        if (sectionContent == null) {
+                            visiting.remove(id);
+                            throw new TemplateParsingException(
+                                    "Template '" + id + "' inserts unknown section '" + sectionName +
+                                            "' from '" + template.extendsId() + "'"
+                            );
+                        }
+                        finalElements.addAll(sectionContent);
+                    } else {
+                        finalElements.add(element);
+                    }
+                }
+            } else {
+                finalElements = new ArrayList<>(parent.elements());
+                finalElements.addAll(template.elements());
+            }
+        } else {
+            finalElements = new ArrayList<>(template.elements());
         }
-        elements.addAll(template.elements());
 
         visiting.remove(id);
-        Resolved out = new Resolved(List.copyOf(elements), tooltipStyle);
+        Resolved out = new Resolved(List.copyOf(finalElements), tooltipStyle, Map.copyOf(combinedSections));
         resolved.put(id, out);
         return out;
     }
 
-    public @NotNull TemplateElement kdlToElement(@NotNull KdlNode node) throws TemplateParsingException {
+    public @NotNull List<TemplateElement> kdlToElement(
+            @NotNull KdlNode node,
+            @NotNull Map<String, List<TemplateElement>> sections
+    ) throws TemplateParsingException {
         String name = node.name();
         return switch (name) {
             case "blank" -> {
                 var collapseIfEmpty = node.getProperty("collapse-if-empty");
                 if (collapseIfEmpty.isEmpty()) {
-                    yield new TemplateElement.Blank(null);
+                    yield List.of(new TemplateElement.Blank(null));
                 }
-
                 if (!collapseIfEmpty.get().isString()) {
                     throw new TemplateParsingException("Blank property 'collapse-if-empty' must be string");
                 }
-
-                yield new TemplateElement.Blank((String) collapseIfEmpty.get().value());
+                yield List.of(new TemplateElement.Blank((String) collapseIfEmpty.get().value()));
             }
             case "text" -> {
                 if (node.arguments().isEmpty()) {
                     throw new TemplateParsingException("Text element requires string argument");
                 }
-
                 var argument = node.arguments().getFirst();
                 if (!argument.isString()) {
                     throw new TemplateParsingException("Text element requires string argument");
                 }
-
                 var collapseIfEmpty = node.getProperty("collapse-if-empty");
                 if (collapseIfEmpty.isEmpty()) {
-                    yield new TemplateElement.Text((String) argument.value(), null);
+                    yield List.of(new TemplateElement.Text((String) argument.value(), null));
                 }
-
                 if (!collapseIfEmpty.get().isString()) {
-                    throw new TemplateParsingException("Blank property 'collapse-if-empty' must be string");
+                    throw new TemplateParsingException("Text property 'collapse-if-empty' must be string");
                 }
-
-                yield new TemplateElement.Text((String) argument.value(), (String) collapseIfEmpty.get().value());
+                yield List.of(new TemplateElement.Text((String) argument.value(), (String) collapseIfEmpty.get().value()));
             }
             case "var", "variable" -> {
                 if (node.arguments().isEmpty()) {
                     throw new TemplateParsingException("Variable element requires string argument");
                 }
-
                 var argument = node.arguments().getFirst();
                 if (!argument.isString()) {
                     throw new TemplateParsingException("Variable element requires string argument");
                 }
-
                 String varName = (String) argument.value();
+
                 var prefixValue = node.getProperty("prefix");
-                String prefix;
-                if (prefixValue.isEmpty()) {
-                    prefix = null;
-                } else {
+                String prefix = null;
+                if (prefixValue.isPresent()) {
                     if (!prefixValue.get().isString()) {
                         throw new TemplateParsingException("Variable prefix must be string");
                     }
                     prefix = (String) prefixValue.get().value();
                 }
 
-                var suffixValue = node.getProperty("suffix"); // was "prefix" — bug
-                String suffix;
-                if (suffixValue.isEmpty()) {
-                    suffix = null;
-                } else {
+                var suffixValue = node.getProperty("suffix");
+                String suffix = null;
+                if (suffixValue.isPresent()) {
                     if (!suffixValue.get().isString()) {
                         throw new TemplateParsingException("Variable suffix must be string");
                     }
                     suffix = (String) suffixValue.get().value();
                 }
 
-                yield new TemplateElement.Variable(varName, prefix, suffix);
+                yield List.of(new TemplateElement.Variable(varName, prefix, suffix));
             }
             case "group" -> {
                 if (node.arguments().isEmpty()) {
                     throw new TemplateParsingException("Group element requires string argument");
                 }
-
                 var argument = node.arguments().getFirst();
                 if (!argument.isString()) {
                     throw new TemplateParsingException("Group element requires string argument");
                 }
-
                 String groupName = (String) argument.value();
 
                 var eachValue = node.getProperty("each");
@@ -227,17 +249,15 @@ public class TemplateParser {
                 String each = (String) eachValue.get().value();
 
                 var emptyValue = node.getProperty("empty");
-                String emptyRaw = "skip"; // default per format spec
+                String emptyRaw = "skip";
                 if (emptyValue.isPresent()) {
                     if (!emptyValue.get().isString()) {
                         throw new TemplateParsingException("Group 'empty' property must be string");
                     }
                     emptyRaw = (String) emptyValue.get().value();
                 }
-
                 TemplateElement.Group.Empty empty = switch (emptyRaw) {
                     case "skip" -> new TemplateElement.Group.Empty.Skip();
-                    // add Keep / Placeholder cases here once those variants exist
                     default -> throw new TemplateParsingException("Unknown group empty mode: " + emptyRaw);
                 };
 
@@ -259,7 +279,39 @@ public class TemplateParser {
                     joiner = (String) joinerValue.get().value();
                 }
 
-                yield new TemplateElement.Group(groupName, each, empty, inline, joiner);
+                yield List.of(new TemplateElement.Group(groupName, each, empty, inline, joiner));
+            }
+            case "section" -> {
+                if (node.arguments().isEmpty()) {
+                    throw new TemplateParsingException("Section element requires string argument");
+                }
+                var argument = node.arguments().getFirst();
+                if (!argument.isString()) {
+                    throw new TemplateParsingException("Section element requires string argument");
+                }
+                String sectionName = (String) argument.value();
+
+                List<TemplateElement> sectionElements = new ArrayList<>();
+                for (KdlNode child : node.children()) {
+                    sectionElements.addAll(kdlToElement(child, sections));
+                }
+
+                if (sections.containsKey(sectionName)) {
+                    throw new TemplateParsingException("Duplicate section '" + sectionName + "' in template");
+                }
+                sections.put(sectionName, List.copyOf(sectionElements));
+
+                yield sectionElements;
+            }
+            case "insert" -> {
+                if (node.arguments().isEmpty()) {
+                    throw new TemplateParsingException("Insert element requires string argument");
+                }
+                var argument = node.arguments().getFirst();
+                if (!argument.isString()) {
+                    throw new TemplateParsingException("Insert element requires string argument");
+                }
+                yield List.of(new TemplateElement.Insert((String) argument.value()));
             }
             default -> throw new TemplateParsingException("Unknown template element: " + name);
         };
@@ -267,7 +319,8 @@ public class TemplateParser {
 
     private record Resolved(
             @NotNull List<TemplateElement> elements,
-            @Nullable String tooltipStyle
+            @Nullable String tooltipStyle,
+            @NotNull Map<String, List<TemplateElement>> sections
     ) {
     }
 }

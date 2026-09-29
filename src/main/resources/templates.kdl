@@ -1,27 +1,35 @@
 template "vanilla"{
-	group "enchantments" each="<gray><ench_name> <ench_level_roman>" empty="skip"
+	section "enchantments" {
+		group "enchantments" each="<gray><ench_name> <ench_level_roman>" empty="skip"
+	}
 
-	blank collapse-if-empty="attributes"
-	text "<gray>When in Main Hand:" collapse-if-empty="attributes-main-hand"
-	group "attributes-main-hand" each=" <attr_color><attr_value> <attr_name>" empty="skip"
-	text "<gray>When in Off Hand:" collapse-if-empty="attributes-off-hand"
-	group "attributes-off-hand" each=" <attr_color><attr_value> <attr_name>" empty="skip"
-	text "<gray>When Equipped:" collapse-if-empty="attributes-any"
-	group "attributes-any" each=" <attr_color><attr_value> <attr_name>" empty="skip"
-	text "<gray>When on Head:" collapse-if-empty="attributes-head"
-	group "attributes-head" each=" <attr_color><attr_value> <attr_name>" empty="skip"
-	text "<gray>When on Chest:" collapse-if-empty="attributes-chest"
-	group "attributes-chest" each=" <attr_color><attr_value> <attr_name>" empty="skip"
-	text "<gray>When on Legs:" collapse-if-empty="attributes-legs"
-	group "attributes-legs" each=" <attr_color><attr_value> <attr_name>" empty="skip"
-	text "<gray>When on Feet:" collapse-if-empty="attributes-feet"
-	group "attributes-feet" each=" <attr_color><attr_value> <attr_name>" empty="skip"
+	section "attributes" {
+		blank collapse-if-empty="attributes"
+		text "<gray>When in Main Hand:" collapse-if-empty="attributes-main-hand"
+		group "attributes-main-hand" each=" <attr_color><attr_value> <attr_name>" empty="skip"
+		text "<gray>When in Off Hand:" collapse-if-empty="attributes-off-hand"
+		group "attributes-off-hand" each=" <attr_color><attr_value> <attr_name>" empty="skip"
+		text "<gray>When Equipped:" collapse-if-empty="attributes-any"
+		group "attributes-any" each=" <attr_color><attr_value> <attr_name>" empty="skip"
+		text "<gray>When on Head:" collapse-if-empty="attributes-head"
+		group "attributes-head" each=" <attr_color><attr_value> <attr_name>" empty="skip"
+		text "<gray>When on Chest:" collapse-if-empty="attributes-chest"
+		group "attributes-chest" each=" <attr_color><attr_value> <attr_name>" empty="skip"
+		text "<gray>When on Legs:" collapse-if-empty="attributes-legs"
+		group "attributes-legs" each=" <attr_color><attr_value> <attr_name>" empty="skip"
+		text "<gray>When on Feet:" collapse-if-empty="attributes-feet"
+		group "attributes-feet" each=" <attr_color><attr_value> <attr_name>" empty="skip"
+	}
 }
 
 template "vanilla_extended" extends="vanilla" tooltip-style="simple" {
+	var "rarity"
+
+	insert "enchantments"
+	insert "attributes"
+
 	blank collapse-if-empty="description"
 	group "description" each="<gray><line>" empty="skip"
-	var "rarity"
 }
 
 template "weapon_default" {

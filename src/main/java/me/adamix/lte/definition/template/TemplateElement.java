@@ -22,4 +22,5 @@ public sealed interface TemplateElement {
             record Skip() implements Empty {}
         }
     }
+    record Insert(@NotNull String sectionName) implements TemplateElement {}
 }
