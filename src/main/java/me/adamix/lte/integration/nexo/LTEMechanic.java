@@ -58,6 +58,7 @@ public class LTEMechanic extends Mechanic {
         }
 
         void applyTo(LoreTemplateAPI api, ItemStack item) {
+            if (template == null) return;
             var editor = api.edit(item).template(template);
             variables.forEach(editor::variable);
             groups.forEach(editor::group);
