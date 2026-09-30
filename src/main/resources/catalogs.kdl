@@ -1,0 +1,8 @@
+catalog "gems" {
+	entry "empty" {
+		display "<dark_gray>[ ] Empty Socket"
+	}
+	entry "chipped_ruby" {
+		display "<red>Chipped Ruby"
+	}
+}

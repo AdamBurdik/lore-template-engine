@@ -31,7 +31,7 @@ public class LTECommand extends BaseCommand {
     private final LifecycleService lifecycleService;
     private final VariableService variableService;
     private final GroupService groupService;
-    
+
     @Subcommand("reload")
     @CommandPermission("lte.command.reload")
     public void reload(@NotNull CommandSender sender) {
@@ -52,12 +52,11 @@ public class LTECommand extends BaseCommand {
         lifecycleService.rebuildPlayer(player);
         sender.sendMessage("Rebuilt " + player.getName() + "'s templated items!");
     }
-    
+
     @Subcommand("set template")
     @CommandCompletion("@templates")
     public void apply(@NotNull Player player, @NotNull String templateId) {
-        var itemStack = player.getInventory().getItemInMainHand();
-        
+        ItemStack itemStack = player.getInventory().getItemInMainHand();
         templateService.apply(templateId, itemStack);
     }
 
@@ -77,22 +76,120 @@ public class LTECommand extends BaseCommand {
         player.sendMessage("Set variable '" + name + "' to '" + value + "'");
     }
 
-    @Subcommand("set group")
-    @CommandCompletion("@groups")
+    @Subcommand("group set")
+    @CommandCompletion("@groups @groupValues")
     public void setGroup(@NotNull Player player, @NotNull String name, @NotNull String... args) {
         List<String> values = splitLines(String.join(" ", args));
-
         ItemStack itemStack = player.getInventory().getItemInMainHand();
 
-        try {
-            groupService.set(itemStack, name, values);
-        } catch (DefinitionNotFoundException | NotPdcBackedException e) {
-            player.sendMessage(e.getMessage());
-            return;
+        if (executeGroupAction(player, () -> groupService.set(itemStack, name, values))) {
+            templateService.rebuild(itemStack);
+            player.sendMessage("Set group '" + name + "' to " + values.size() + " value(s).");
         }
+    }
 
-        templateService.rebuild(itemStack);
-        player.sendMessage("Set group '" + name + "' to " + values.size() + " value(s)");
+    @Subcommand("group add")
+    @CommandCompletion("@groups @groupValues")
+    public void addGroupValue(@NotNull Player player, @NotNull String name, @NotNull String... args) {
+        List<String> toAdd = splitLines(String.join(" ", args));
+        ItemStack itemStack = player.getInventory().getItemInMainHand();
+
+        if (executeGroupAction(player, () -> {
+            List<String> current = new ArrayList<>(groupService.get(name, itemStack));
+            current.addAll(toAdd);
+            groupService.set(itemStack, name, current);
+        })) {
+            templateService.rebuild(itemStack);
+            player.sendMessage("Added " + toAdd.size() + " element(s) to group '" + name + "'.");
+        }
+    }
+
+    @Subcommand("group setslot")
+    @CommandCompletion("@groups 1|2|3|4 @groupValues")
+    public void setGroupSlot(@NotNull Player player, @NotNull String name, int index, @NotNull String value) {
+        ItemStack itemStack = player.getInventory().getItemInMainHand();
+
+        if (executeGroupAction(player, () -> {
+            List<String> current = new ArrayList<>(groupService.get(name, itemStack));
+
+            // 1-based index conversion
+            int targetIndex = index - 1;
+            if (targetIndex < 0 || targetIndex >= current.size()) {
+                throw new IllegalArgumentException("Index " + index + " is out of bounds for group size " + current.size());
+            }
+
+            current.set(targetIndex, value);
+            groupService.set(itemStack, name, current);
+        })) {
+            templateService.rebuild(itemStack);
+            player.sendMessage("Set slot " + index + " in group '" + name + "' to '" + value + "'.");
+        }
+    }
+
+    @Subcommand("group removeat")
+    @CommandCompletion("@groups 1|2|3|4")
+    public void removeGroupSlot(@NotNull Player player, @NotNull String name, int index) {
+        ItemStack itemStack = player.getInventory().getItemInMainHand();
+
+        if (executeGroupAction(player, () -> {
+            List<String> current = new ArrayList<>(groupService.get(name, itemStack));
+
+            // 1-based index conversion
+            int targetIndex = index - 1;
+            if (targetIndex < 0 || targetIndex >= current.size()) {
+                throw new IllegalArgumentException("Index " + index + " is out of bounds for group size " + current.size());
+            }
+
+            current.remove(targetIndex);
+            groupService.set(itemStack, name, current);
+        })) {
+            templateService.rebuild(itemStack);
+            player.sendMessage("Removed slot " + index + " from group '" + name + "'.");
+        }
+    }
+
+    @Subcommand("group remove")
+    @CommandCompletion("@groups @groupValues")
+    public void removeGroupValue(@NotNull Player player, @NotNull String name, @NotNull String value) {
+        ItemStack itemStack = player.getInventory().getItemInMainHand();
+
+        if (executeGroupAction(player, () -> {
+            List<String> current = new ArrayList<>(groupService.get(name, itemStack));
+            boolean removed = current.remove(value);
+            if (!removed) {
+                throw new IllegalArgumentException("Value '" + value + "' not found in group '" + name + "'.");
+            }
+            groupService.set(itemStack, name, current);
+        })) {
+            templateService.rebuild(itemStack);
+            player.sendMessage("Removed first occurrence of '" + value + "' from group '" + name + "'.");
+        }
+    }
+
+    @Subcommand("group clear")
+    @CommandCompletion("@groups")
+    public void clearGroup(@NotNull Player player, @NotNull String name) {
+        ItemStack itemStack = player.getInventory().getItemInMainHand();
+
+        if (executeGroupAction(player, () -> groupService.set(itemStack, name, List.of()))) {
+            templateService.rebuild(itemStack);
+            player.sendMessage("Cleared all values from group '" + name + "'.");
+        }
+    }
+
+    @FunctionalInterface
+    private interface GroupAction {
+        void execute() throws DefinitionNotFoundException, NotPdcBackedException, IllegalArgumentException;
+    }
+
+    private boolean executeGroupAction(@NotNull Player player, @NotNull GroupAction action) {
+        try {
+            action.execute();
+            return true;
+        } catch (DefinitionNotFoundException | NotPdcBackedException | IllegalArgumentException e) {
+            player.sendMessage(e.getMessage());
+            return false;
+        }
     }
 
     private static @NotNull List<String> splitLines(@NotNull String raw) {

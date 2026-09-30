@@ -53,8 +53,9 @@ public class ItemListener implements Listener {
         event.getInventory().setResult(result);
     }
 
-    private @Nullable ItemStack findTemplatedIngredient(@NotNull ItemStack[] matrix) {
+    private @Nullable ItemStack findTemplatedIngredient(@Nullable ItemStack @NotNull [] matrix) {
         for (ItemStack ingredient : matrix) {
+            if (ingredient == null) continue;
             if (ingredient.getType().isAir()) continue;
             if (!ingredient.hasItemMeta()) continue;
 

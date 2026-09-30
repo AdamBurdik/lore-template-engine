@@ -43,3 +43,9 @@ template "weapon_default" {
 	group "attributes-main-hand" each=" <attr_color><attr_value> <attr_name>" empty="skip"
 	text "<red>This is footer!"
 }
+
+template "gems_sockets" {
+	blank collapse-if-empty="gem_sockets"
+	text "<gray>Gem Sockets:" collapse-if-empty="gem_sockets"
+	group "gem_sockets" each="<gem_socket>" empty="skip"
+}

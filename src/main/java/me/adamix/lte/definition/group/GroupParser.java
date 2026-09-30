@@ -15,120 +15,165 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GroupParser {
-
-    public @NotNull List<GroupDefinition> parseFile(@NotNull Path path) throws KdlParseException, IOException, TemplateParsingException {
+    public @NotNull List<GroupDefinition> parseFile(
+            @NotNull Path path
+    ) throws KdlParseException, IOException, TemplateParsingException {
         var parser = KdlParser.v2();
         var document = parser.parse(path);
-
-        return kdlToGroups(document);
+        return parseDocument(document);
     }
 
-    public @NotNull List<GroupDefinition> kdlToGroups(@NotNull KdlDocument document) throws TemplateParsingException {
+    public @NotNull List<GroupDefinition> parseDocument(@NotNull KdlDocument document)
+            throws TemplateParsingException {
         List<GroupDefinition> definitions = new ArrayList<>();
 
         for (KdlNode node : document.nodes()) {
-            if (!node.name().equals("group")) continue;
-
-            if (node.arguments().isEmpty()) {
-                throw new TemplateParsingException("Group requires at least one argument for its name");
+            if (node.name().equals("group")) {
+                definitions.add(parseGroupNode(node));
             }
-
-            var nameArg = node.arguments().getFirst();
-            if (!nameArg.isString()) {
-                throw new TemplateParsingException("Group name must be a string");
-            }
-
-            String groupName = (String) nameArg.value();
-
-            GroupDefinition.Source.Builtin builtinSource = null;
-            String pdcKey = null;
-            String valueName = null;
-
-            for (KdlNode child : node.children()) {
-                switch (child.name()) {
-                    case "builtin" -> {
-                        if (builtinSource != null) {
-                            throw new TemplateParsingException("Group '" + groupName + "' has duplicate 'builtin' definitions");
-                        }
-                        if (child.arguments().isEmpty() || !child.arguments().getFirst().isString()) {
-                            throw new TemplateParsingException("Builtin source requires a string name argument");
-                        }
-
-                        String builtinName = (String) child.arguments().getFirst().value();
-                        String slot = null;
-                        var slotProp = child.getProperty("slot");
-                        if (slotProp.isPresent()) {
-                            if (!slotProp.get().isString()) {
-                                throw new TemplateParsingException("Builtin 'slot' property must be a string");
-                            }
-                            slot = normalizeSlot((String) slotProp.get().value());
-                            if (slot == null) {
-                                throw new TemplateParsingException(
-                                        "Unknown builtin slot '" + slotProp.get().value() + "' for group '" + groupName + "'"
-                                );
-                            }
-                        }
-
-                        builtinSource = new GroupDefinition.Source.Builtin(builtinName, slot);
-                    }
-                    case "source" -> {
-                        if (child.arguments().isEmpty() || !child.arguments().getFirst().isString()) {
-                            throw new TemplateParsingException("Source block requires a string argument");
-                        }
-
-                        String sourceId = (String) child.arguments().getFirst().value();
-                        if (sourceId.equals("pdc")) {
-                            var keyProp = child.getProperty("key");
-                            if (keyProp.isEmpty() || !keyProp.get().isString()) {
-                                throw new TemplateParsingException("PDC source requires a string 'key' property");
-                            }
-                            pdcKey = (String) keyProp.get().value();
-                        } else {
-                            throw new TemplateParsingException("Unknown source type: " + sourceId);
-                        }
-                    }
-                    case "value-name" -> {
-                        if (child.arguments().isEmpty() || !child.arguments().getFirst().isString()) {
-                            throw new TemplateParsingException("'value-name' requires a string argument");
-                        }
-                        valueName = (String) child.arguments().getFirst().value();
-                    }
-                    default -> {
-                        throw new TemplateParsingException("Unknown value: " + child.name());
-                    }
-                }
-            }
-
-            if (builtinSource != null) {
-                if (pdcKey != null || valueName != null) {
-                    throw new TemplateParsingException(
-                            "Group '" + groupName + "' defines 'builtin' but also includes PDC settings (key or value-name)"
-                    );
-                }
-                definitions.add(new GroupDefinition(groupName, builtinSource));
-                continue;
-            }
-
-            if (pdcKey != null) {
-                if (valueName == null) {
-                    throw new TemplateParsingException("Group '" + groupName + "' using PDC source requires a 'value-name'");
-                }
-                definitions.add(new GroupDefinition(groupName, new GroupDefinition.Source.PDC(pdcKey, valueName)));
-                continue;
-            }
-
-            throw new TemplateParsingException("Group '" + groupName + "' must specify a valid source");
         }
 
-        return definitions;
+        return List.copyOf(definitions);
+    }
+
+    private @NotNull GroupDefinition parseGroupNode(
+            @NotNull KdlNode groupNode
+    ) throws TemplateParsingException {
+        String groupName = extractSingleStringArgument(groupNode, "group node");
+
+        GroupDefinition.Source.Builtin builtinSource = null;
+        String pdcKey = null;
+        String pdcType = null;
+        String valueName = null;
+        String catalog = null;
+        String defaultValue = null;
+
+        for (KdlNode child : groupNode.children()) {
+            switch (child.name()) {
+                case "builtin" -> {
+                    if (builtinSource != null) {
+                        throw new TemplateParsingException("Group '" + groupName + "' has duplicate 'builtin' definitions");
+                    }
+                    builtinSource = parseBuiltinNode(child, groupName);
+                }
+                case "source" -> {
+                    String sourceId = extractSingleStringArgument(child, "'source' node in group '" + groupName + "'");
+                    if (!sourceId.equals("pdc")) {
+                        throw new TemplateParsingException("Unknown source type: '" + sourceId + "' in group '" + groupName + "'");
+                    }
+
+                    pdcKey = extractPropertyString(child, "key", "PDC source in group '" + groupName + "'");
+                    pdcType = extractOptionalPropertyString(child, "type");
+                }
+                case "value-name" -> {
+                    if (valueName != null) {
+                        throw new TemplateParsingException("Duplicate 'value-name' in group '" + groupName + "'");
+                    }
+                    valueName = extractSingleStringArgument(child, "'value-name' node in group '" + groupName + "'");
+                }
+                case "catalog" -> {
+                    if (catalog != null) {
+                        throw new TemplateParsingException("Duplicate 'catalog' in group '" + groupName + "'");
+                    }
+                    catalog = extractSingleStringArgument(child, "'catalog' node in group '" + groupName + "'");
+                }
+                case "default" -> {
+                    if (defaultValue != null) {
+                        throw new TemplateParsingException("Duplicate 'default' in group '" + groupName + "'");
+                    }
+                    defaultValue = extractSingleStringArgument(child, "'default' node in group '" + groupName + "'");
+                }
+                default -> throw new TemplateParsingException(
+                        "Unknown node '" + child.name() + "' inside group '" + groupName + "'"
+                );
+            }
+        }
+
+        // Validate Builtin vs PDC source configuration
+        if (builtinSource != null) {
+            if (pdcKey != null || valueName != null || catalog != null || defaultValue != null) {
+                throw new TemplateParsingException(
+                        "Group '" + groupName + "' defines 'builtin' but also includes PDC/catalog settings"
+                );
+            }
+            return new GroupDefinition(groupName, builtinSource);
+        }
+
+        if (pdcKey != null) {
+            if (valueName == null) {
+                throw new TemplateParsingException("Group '" + groupName + "' using PDC source requires a 'value-name'");
+            }
+            return new GroupDefinition(
+                    groupName,
+                    new GroupDefinition.Source.PDC(pdcKey, valueName, catalog, defaultValue)
+            );
+        }
+
+        throw new TemplateParsingException("Group '" + groupName + "' must specify a valid source (builtin or PDC)");
+    }
+
+    private @NotNull GroupDefinition.Source.Builtin parseBuiltinNode(
+            @NotNull KdlNode builtinNode,
+            @NotNull String groupName
+    ) throws TemplateParsingException {
+        String builtinName = extractSingleStringArgument(builtinNode, "'builtin' node in group '" + groupName + "'");
+        String slot = null;
+
+        var slotProp = builtinNode.getProperty("slot");
+        if (slotProp.isPresent()) {
+            if (!slotProp.get().isString()) {
+                throw new TemplateParsingException("Builtin 'slot' property must be a string in group '" + groupName + "'");
+            }
+            String rawSlot = (String) slotProp.get().value();
+            slot = normalizeSlot(rawSlot);
+            if (slot == null) {
+                throw new TemplateParsingException("Unknown builtin slot '" + rawSlot + "' for group '" + groupName + "'");
+            }
+        }
+
+        return new GroupDefinition.Source.Builtin(builtinName, slot);
+    }
+
+    private @NotNull String extractSingleStringArgument(
+            @NotNull KdlNode node,
+            @NotNull String context
+    ) throws TemplateParsingException {
+        var args = node.arguments();
+        if (args.isEmpty()) {
+            throw new TemplateParsingException("Expected a string argument for " + context + ", but none was provided");
+        }
+
+        var arg = args.getFirst();
+        if (!arg.isString() || !(arg.value() instanceof String strVal)) {
+            throw new TemplateParsingException("Argument for " + context + " must be a valid string");
+        }
+
+        return strVal;
+    }
+
+    private @NotNull String extractPropertyString(
+            @NotNull KdlNode node,
+            @NotNull String propertyKey,
+            @NotNull String context
+    ) throws TemplateParsingException {
+        var prop = node.getProperty(propertyKey);
+        if (prop.isEmpty() || !prop.get().isString() || !(prop.get().value() instanceof String strVal)) {
+            throw new TemplateParsingException("Property '" + propertyKey + "' is required and must be a string in " + context);
+        }
+        return strVal;
+    }
+
+    private @Nullable String extractOptionalPropertyString(@NotNull KdlNode node, @NotNull String propertyKey) {
+        var prop = node.getProperty(propertyKey);
+        if (prop.isPresent() && prop.get().isString() && prop.get().value() instanceof String strVal) {
+            return strVal;
+        }
+        return null;
     }
 
     private static @Nullable String normalizeSlot(@NotNull String raw) {
         String key = raw.trim().toLowerCase().replace("-", "").replace("_", "");
         EquipmentSlotGroup group = EquipmentSlotGroup.getByName(key);
-        if (group == null) {
-            return null;
-        }
-        return group.toString();
+        return group != null ? group.toString() : null;
     }
 }

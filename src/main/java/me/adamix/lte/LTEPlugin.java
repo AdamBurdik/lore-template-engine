@@ -5,6 +5,8 @@ import dev.kdl.parse.KdlParseException;
 import dev.kdl.parse.Reporter;
 import me.adamix.lte.api.LoreTemplateAPI;
 import me.adamix.lte.command.LTECommand;
+import me.adamix.lte.definition.catalog.CatalogDefinition;
+import me.adamix.lte.definition.catalog.CatalogParser;
 import me.adamix.lte.definition.group.GroupDefinition;
 import me.adamix.lte.definition.group.GroupParser;
 import me.adamix.lte.definition.template.LoreTemplateDefinition;
@@ -15,9 +17,7 @@ import me.adamix.lte.editor.ItemEditorImpl;
 import me.adamix.lte.integration.nexo.NexoIntegration;
 import me.adamix.lte.listener.ItemListener;
 import me.adamix.lte.listener.PlayerListener;
-import me.adamix.lte.registry.GroupRegistry;
-import me.adamix.lte.registry.TemplateRegistry;
-import me.adamix.lte.registry.VariableRegistry;
+import me.adamix.lte.registry.Registry;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
@@ -26,6 +26,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -35,9 +36,11 @@ import java.util.Set;
 public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
     public static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
 
-    private final VariableRegistry variableRegistry = new VariableRegistry();
-    private final TemplateRegistry templateRegistry = new TemplateRegistry();
-    private final GroupRegistry groupRegistry = new GroupRegistry();
+    private final Registry<VariableDefinition> variableRegistry = new Registry<>();
+    private final Registry<LoreTemplateDefinition> templateRegistry = new Registry<>();
+    private final Registry<GroupDefinition> groupRegistry = new Registry<>();
+    private final Registry<CatalogDefinition> catalogRegistry = new Registry<>();
+    
     
     private TemplateService templateService;
     private VariableService variableService;
@@ -53,6 +56,7 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
         var templateParser = new TemplateParser();
         var variableParser = new VariableParser();
         var groupParser = new GroupParser();
+        var catalogParser = new CatalogParser();
         
         try {
             var result = templateParser.parseFile(getDataPath().resolve("templates.kdl"));
@@ -69,6 +73,11 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
             for (GroupDefinition definition : groupResult) {
                 groupRegistry.register(definition.name(), definition);
             }
+            
+            var catalogResult = catalogParser.parseFile(getDataPath().resolve("catalogs.kdl"));
+            for (CatalogDefinition definition : catalogResult) {
+                catalogRegistry.register(definition.name(), definition);
+            }
 
         } catch (KdlParseException e) {
             var report = Reporter.getReport(e, true);
@@ -83,6 +92,7 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
         saveResource("templates.kdl", false);
         saveResource("variables.kdl", false);
         saveResource("groups.kdl", false);
+        saveResource("catalogs.kdl", false);
         
         commandManager = new PaperCommandManager(this);
 
@@ -101,9 +111,30 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
 
             return lookup.map().keySet();
         });
+        commandManager.getCommandCompletions().registerCompletion("groupValues", c -> {
+            var args = c.getArgs();
+            if (args.isEmpty()) return Set.of();
+
+            String groupName = args.getFirst();
+            var groupOpt = groupRegistry.get(groupName);
+            if (groupOpt.isEmpty()) return Set.of();
+
+            var group = groupOpt.get();
+            if (group.source() instanceof me.adamix.lte.definition.group.GroupDefinition.Source.PDC pdcSource) {
+                if (pdcSource.catalog() != null) {
+                    var catalogOpt = catalogRegistry.get(pdcSource.catalog());
+                    if (catalogOpt.isPresent()) {
+                        return catalogOpt.get().entries().values().stream()
+                                .map(CatalogDefinition.Entry::id)
+                                .toList();
+                    }
+                }
+            }
+            return Set.of();
+        });
         
         variableService = new VariableService(this, variableRegistry);
-        groupService = new GroupService(this, groupRegistry);
+        groupService = new GroupService(this, groupRegistry, catalogRegistry);
         templateService = new TemplateService(this, templateRegistry, variableService, groupService);
         lifecycleService = new LifecycleService(templateService);
 
@@ -167,6 +198,15 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
             return variableService.getValue(variable, itemStack);
         } catch (NoSuchElementException _) {
             return Optional.empty();
+        }
+    }
+
+    @Override
+    public @NotNull List<String> getGroup(@NotNull ItemStack item, @NotNull String group) {
+        try {
+            return groupService.resolve(group, item).values();
+        } catch (NoSuchElementException _) {
+            return Collections.emptyList();
         }
     }
 

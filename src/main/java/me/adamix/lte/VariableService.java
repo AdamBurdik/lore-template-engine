@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import me.adamix.lte.api.exception.DefinitionNotFoundException;
 import me.adamix.lte.api.exception.NotPdcBackedException;
 import me.adamix.lte.definition.variable.VariableDefinition;
-import me.adamix.lte.registry.VariableRegistry;
+import me.adamix.lte.registry.Registry;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
@@ -16,7 +16,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class VariableService {
     private final LTEPlugin plugin;
-    private final VariableRegistry variableRegistry;
+    private final Registry<VariableDefinition> variableRegistry;
 
     public void set(@NotNull ItemStack itemStack, @NotNull String name, @NotNull String value) {
         var definitionOpt = variableRegistry.get(name);

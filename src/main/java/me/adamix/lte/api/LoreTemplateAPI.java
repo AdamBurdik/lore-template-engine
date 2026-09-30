@@ -38,7 +38,8 @@ public interface LoreTemplateAPI {
     void clear(@NotNull ItemStack item);
 
     @NotNull Optional<String> getVariable(@NotNull ItemStack item, @NotNull String variable);
-
+    @NotNull List<String> getGroup(@NotNull ItemStack item, @NotNull String group);
+    
     /**
      *  Creates item editor for editing item template, variables or groups
      */

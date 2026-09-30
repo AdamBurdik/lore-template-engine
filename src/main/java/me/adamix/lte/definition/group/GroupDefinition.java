@@ -15,7 +15,9 @@ public record GroupDefinition(
         }
         record PDC(
                 @NotNull String key,
-                @NotNull String valueName
+                @NotNull String valueName,
+                @Nullable String catalog,
+                @Nullable String defaultValue // maps nulls/unmapped values to a catalog entry
         ) implements Source {}
     }
 }

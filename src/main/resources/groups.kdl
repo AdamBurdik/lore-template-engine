@@ -54,3 +54,11 @@ group "description" {
 	value-name "line"
 // exposes: <line>
 }
+
+group "gem_sockets" {
+	source "pdc" key="gem_sockets" type="string_list"
+	value-name "gem_socket"
+	catalog "gems"
+	default: "empty"
+// exposes: <gem_socket>
+}

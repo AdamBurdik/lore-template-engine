@@ -1,6 +1,6 @@
 package me.adamix.lte;
 
-import me.adamix.lte.definition.group.ResolvedGroup;
+import me.adamix.lte.api.ResolvedGroup;
 import me.adamix.lte.definition.template.LoreTemplateDefinition;
 import me.adamix.lte.definition.template.TemplateElement;
 import net.kyori.adventure.text.Component;

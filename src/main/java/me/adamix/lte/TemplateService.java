@@ -3,7 +3,7 @@ package me.adamix.lte;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.TooltipDisplay;
 import me.adamix.lte.definition.template.LoreTemplateDefinition;
-import me.adamix.lte.registry.TemplateRegistry;
+import me.adamix.lte.registry.Registry;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import org.apache.commons.lang3.NotImplementedException;
@@ -21,7 +21,7 @@ import java.util.Set;
 @SuppressWarnings("UnstableApiUsage")
 public class TemplateService {
     private final LTEPlugin plugin;
-    private final TemplateRegistry registry;
+    private final Registry<LoreTemplateDefinition> registry;
     private final VariableService variableService;
     private final GroupService groupService;
     private final LoreRenderer renderer;
@@ -30,7 +30,7 @@ public class TemplateService {
 
     public TemplateService(
             @NotNull LTEPlugin plugin,
-            @NotNull TemplateRegistry registry,
+            @NotNull Registry<LoreTemplateDefinition> registry,
             @NotNull VariableService variableService,
             @NotNull GroupService groupService
     ) {
