@@ -121,8 +121,9 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
 
             var group = groupOpt.get();
             if (group.source() instanceof me.adamix.lte.definition.group.GroupDefinition.Source.PDC pdcSource) {
-                if (pdcSource.catalog() != null) {
-                    var catalogOpt = catalogRegistry.get(pdcSource.catalog());
+                String catalogName = pdcSource.catalog();
+                if (catalogName != null) {
+                    var catalogOpt = catalogRegistry.get(catalogName);
                     if (catalogOpt.isPresent()) {
                         return catalogOpt.get().entries().values().stream()
                                 .map(CatalogDefinition.Entry::id)
