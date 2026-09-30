@@ -205,7 +205,7 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
     @Override
     public @NotNull List<String> getGroup(@NotNull ItemStack item, @NotNull String group) {
         try {
-            return groupService.resolve(group, item).values();
+            return groupService.get(group, item);
         } catch (NoSuchElementException _) {
             return Collections.emptyList();
         }
