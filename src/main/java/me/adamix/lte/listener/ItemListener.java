@@ -44,6 +44,13 @@ public class ItemListener implements Listener {
         if (result == null) return;
 
         ItemStack[] matrix = event.getInventory().getMatrix();
+        // This really useless check is forced by spotbugs.
+        if (matrix != null) {
+            ItemStack templatedIngredient = findTemplatedIngredient(matrix);
+            if (templatedIngredient != null) {
+                copyLoreData(templatedIngredient, result);
+            }
+        }
         ItemStack templatedIngredient = findTemplatedIngredient(matrix);
         if (templatedIngredient != null) {
             copyLoreData(templatedIngredient, result);
