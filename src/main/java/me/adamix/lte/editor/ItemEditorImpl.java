@@ -5,6 +5,7 @@ import me.adamix.lte.GroupService;
 import me.adamix.lte.TemplateService;
 import me.adamix.lte.VariableService;
 import me.adamix.lte.api.LoreTemplateAPI;
+import me.adamix.lte.definition.variable.VariableValue;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -20,7 +21,7 @@ public final class ItemEditorImpl implements LoreTemplateAPI.ItemEditor {
     private final @NotNull VariableService variableService;
     private final @NotNull GroupService groupService;
     private @Nullable String templateId;
-    private final @NotNull Map<String, String> variables = new HashMap<>(0);
+    private final @NotNull Map<String, VariableValue> variables = new HashMap<>(0);
     private final @NotNull Map<String, List<String>> groups = new HashMap<>(0);
 
     @Override
@@ -30,7 +31,7 @@ public final class ItemEditorImpl implements LoreTemplateAPI.ItemEditor {
     }
 
     @Override
-    public @NotNull LoreTemplateAPI.ItemEditor variable(@NotNull String variable, @NotNull String value) {
+    public @NotNull LoreTemplateAPI.ItemEditor variable(@NotNull String variable, @NotNull VariableValue value) {
         variables.put(variable, value);
         return this;
     }
@@ -43,7 +44,7 @@ public final class ItemEditorImpl implements LoreTemplateAPI.ItemEditor {
 
     @Override
     public void apply() {
-        variables.forEach((name, value) -> variableService.set(itemStack, name, value));
+        variables.forEach((name, value) -> variableService.setValue(itemStack, name, value));
         groups.forEach((name, values) -> groupService.set(itemStack, name, values));
 
         if (templateId != null) {

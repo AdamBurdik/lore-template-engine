@@ -42,7 +42,7 @@ public class LoreRenderer {
                     lore.add(LTEPlugin.MINI_MESSAGE.deserialize("<!italic><white>" + value));
                 }
                 case TemplateElement.Variable(String name, String prefix, String suffix) -> {
-                    var variableValue = variableService.getValue(name, itemStack);
+                    var variableValue = variableService.getDisplayValue(name, itemStack);
                     if (variableValue.isEmpty()) break;
 
                     String finalValue = (prefix == null ? "" : prefix)

@@ -13,6 +13,7 @@ import me.adamix.lte.definition.template.LoreTemplateDefinition;
 import me.adamix.lte.definition.template.TemplateParser;
 import me.adamix.lte.definition.variable.VariableDefinition;
 import me.adamix.lte.definition.variable.VariableParser;
+import me.adamix.lte.definition.variable.VariableValue;
 import me.adamix.lte.editor.ItemEditorImpl;
 import me.adamix.lte.integration.nexo.NexoIntegration;
 import me.adamix.lte.listener.ItemListener;
@@ -27,6 +28,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -108,8 +110,8 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
 
             var lookup = definitionOpt.get().lookup();
             if (lookup == null) return Set.of();
-
-            return lookup.map().keySet();
+            
+            return lookup.entries().keySet();
         });
         commandManager.getCommandCompletions().registerCompletion("groupValues", c -> {
             var args = c.getArgs();
@@ -134,7 +136,7 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
             return Set.of();
         });
         
-        variableService = new VariableService(this, variableRegistry);
+        variableService = new VariableService(this, variableRegistry, new HashMap<>());
         groupService = new GroupService(this, groupRegistry, catalogRegistry);
         templateService = new TemplateService(this, templateRegistry, variableService, groupService);
         lifecycleService = new LifecycleService(templateService);
@@ -194,9 +196,9 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
     }
 
     @Override
-    public @NotNull Optional<String> getVariable(@NotNull ItemStack itemStack, @NotNull String variable) {
+    public @NotNull Optional<VariableValue> getVariable(@NotNull ItemStack itemStack, @NotNull String variable) {
         try {
-            return variableService.getValue(variable, itemStack);
+            return variableService.getRawValue(variable, itemStack);
         } catch (NoSuchElementException _) {
             return Optional.empty();
         }

@@ -14,6 +14,7 @@ import me.adamix.lte.TemplateService;
 import me.adamix.lte.VariableService;
 import me.adamix.lte.api.exception.DefinitionNotFoundException;
 import me.adamix.lte.api.exception.NotPdcBackedException;
+import me.adamix.lte.definition.variable.VariableValue;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -66,7 +67,7 @@ public class LTECommand extends BaseCommand {
         ItemStack itemStack = player.getInventory().getItemInMainHand();
 
         try {
-            variableService.set(itemStack, name, value);
+            variableService.setValue(itemStack, name, VariableValue.of(value));
         } catch (DefinitionNotFoundException | NotPdcBackedException e) {
             player.sendMessage(e.getMessage());
             return;

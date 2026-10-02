@@ -3,6 +3,7 @@ package me.adamix.lte.integration.nexo;
 import com.nexomc.nexo.mechanics.Mechanic;
 import com.nexomc.nexo.mechanics.MechanicFactory;
 import me.adamix.lte.api.LoreTemplateAPI;
+import me.adamix.lte.definition.variable.VariableValue;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
@@ -30,20 +31,27 @@ public class LTEMechanic extends Mechanic {
 
     private record Config(
             @Nullable String template,
-            Map<String, String> variables,
+            Map<String, VariableValue> variables,
             Map<String, List<String>> groups
     ) {
         static Config parse(ConfigurationSection section) {
-            Map<String, String> variables = new LinkedHashMap<>();
+            Map<String, VariableValue> variables = new LinkedHashMap<>();
             ConfigurationSection vars = section.getConfigurationSection("variables");
             if (vars != null) {
-                for (String k : vars.getKeys(false)) variables.put(k, vars.getString(k));
+                for (String k : vars.getKeys(false)) {
+                    VariableValue value = parseVariableValue(vars, k);
+                    if (value != null) {
+                        variables.put(k, value);
+                    }
+                }
             }
 
             Map<String, List<String>> groups = new LinkedHashMap<>();
             ConfigurationSection grp = section.getConfigurationSection("groups");
             if (grp != null) {
-                for (String k : grp.getKeys(false)) groups.put(k, grp.getStringList(k));
+                for (String k : grp.getKeys(false)) {
+                    groups.put(k, grp.getStringList(k));
+                }
             }
 
             return new Config(
@@ -51,6 +59,22 @@ public class LTEMechanic extends Mechanic {
                     Collections.unmodifiableMap(variables),
                     Collections.unmodifiableMap(groups)
             );
+        }
+
+        private static @Nullable VariableValue parseVariableValue(ConfigurationSection section, String key) {
+            if (section.isBoolean(key)) {
+                return VariableValue.of(section.getBoolean(key));
+            } else if (section.isInt(key)) {
+                return VariableValue.of(section.getInt(key));
+            } else if (section.isDouble(key)) {
+                return VariableValue.of(section.getDouble(key));
+            } else if (section.isString(key)) {
+                String val = section.getString(key);
+                return val != null ? VariableValue.of(val) : null;
+            } else {
+                Object val = section.get(key);
+                return val != null ? VariableValue.of(String.valueOf(val)) : null;
+            }
         }
 
         boolean isApplicable(LoreTemplateAPI api) {
