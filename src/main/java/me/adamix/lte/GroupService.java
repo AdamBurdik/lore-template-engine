@@ -3,13 +3,14 @@ package me.adamix.lte;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.ItemAttributeModifiers;
 import io.papermc.paper.datacomponent.item.attribute.AttributeModifierDisplay;
-import lombok.RequiredArgsConstructor;
 import me.adamix.lte.api.ResolvedGroup;
 import me.adamix.lte.api.exception.DefinitionNotFoundException;
 import me.adamix.lte.api.exception.NotPdcBackedException;
 import me.adamix.lte.definition.catalog.CatalogDefinition;
 import me.adamix.lte.definition.group.GroupDefinition;
 import me.adamix.lte.registry.Registry;
+import me.adamix.lte.types.NullableString;
+import me.adamix.lte.types.NullableStringType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
@@ -25,56 +26,103 @@ import org.jetbrains.annotations.Nullable;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
 @SuppressWarnings("UnstableApiUsage")
-@RequiredArgsConstructor
 public class GroupService {
     private final LTEPlugin plugin;
     private final Registry<GroupDefinition> groupRegistry;
     private final Registry<CatalogDefinition> catalogRegistry;
+    private final PersistentDataType<?, List<NullableString>> listType;
 
-    // separator used to encode a List<String> into a single PDC string value
-    private static final String LIST_SEPARATOR = "\u0001";
-
-    public @NotNull List<String> get(
-            @NotNull String name,
-            @NotNull ItemStack itemStack
+    public GroupService(
+            LTEPlugin plugin,
+            Registry<GroupDefinition> groupRegistry,
+            Registry<CatalogDefinition> catalogRegistry
     ) {
-        var definitionOpt = groupRegistry.get(name);
-        if (definitionOpt.isEmpty()) {
-            throw new NoSuchElementException("No group definition registered with name " + name);
-        }
-
-        var definition = definitionOpt.get();
-
-        return (switch (definition.source()) {
-            case GroupDefinition.Source.Builtin(String builtin, String slot) ->
-                    resolveBuiltin(builtin, slot, itemStack);
-            case GroupDefinition.Source.PDC pdc -> resolvePdc(pdc, itemStack, true);
-        }).values();
+        this.plugin = plugin;
+        this.groupRegistry = groupRegistry;
+        this.catalogRegistry = catalogRegistry;
+        this.listType = PersistentDataType.LIST.listTypeFrom(new NullableStringType(plugin));
     }
-    
-    public @NotNull ResolvedGroup resolve(
-            @NotNull String name,
-            @NotNull ItemStack itemStack
-    ) {
-        var definitionOpt = groupRegistry.get(name);
-        if (definitionOpt.isEmpty()) {
-            throw new NoSuchElementException("No group definition registered with name " + name);
-        }
 
-        var definition = definitionOpt.get();
+    public @NotNull List<@Nullable String> get(@NotNull String name, @NotNull ItemStack itemStack) {
+        var definition = groupRegistry.get(name)
+                .orElseThrow(() -> new NoSuchElementException("No group definition registered with name " + name));
+
+        return switch (definition.source()) {
+            case GroupDefinition.Source.Builtin(String builtin, String slot) ->
+                    resolveBuiltin(builtin, slot, itemStack).values();
+            case GroupDefinition.Source.PDC pdc -> readValues(pdc, itemStack);
+        };
+    }
+
+    public @NotNull ResolvedGroup resolve(@NotNull String name, @NotNull ItemStack itemStack) {
+        var definition = groupRegistry.get(name)
+                .orElseThrow(() -> new NoSuchElementException("No group definition registered with name " + name));
 
         return switch (definition.source()) {
             case GroupDefinition.Source.Builtin(String builtin, String slot) ->
                     resolveBuiltin(builtin, slot, itemStack);
-            case GroupDefinition.Source.PDC pdc -> resolvePdc(pdc, itemStack, false);
+            case GroupDefinition.Source.PDC pdc -> resolvePdc(pdc, itemStack);
         };
+    }
+
+    private @NotNull NamespacedKey keyFor(GroupDefinition.Source.PDC pdc) {
+        return new NamespacedKey(plugin, "group_" + pdc.key());
+    }
+
+    private @NotNull List<@Nullable String> readValues(
+            @NotNull GroupDefinition.Source.PDC pdc,
+            @NotNull ItemStack itemStack
+    ) {
+        var container = itemStack.getPersistentDataContainer();
+        List<NullableString> stored = container.get(keyFor(pdc), listType);
+        if (stored == null) return List.of();
+
+        List<@Nullable String> values = new ArrayList<>(stored.size());
+        for (NullableString s : stored) {
+            values.add(s.value());
+        }
+        return values;
+    }
+
+    private @NotNull ResolvedGroup resolvePdc(
+            @NotNull GroupDefinition.Source.PDC pdc,
+            @NotNull ItemStack itemStack
+    ) {
+        List<@Nullable String> values = readValues(pdc, itemStack);
+        if (values.isEmpty()) return ResolvedGroup.empty();
+
+        String catalogName = pdc.catalog();
+        CatalogDefinition catalog = null;
+        CatalogDefinition.Entry defaultEntry = null;
+        if (catalogName != null) {
+            catalog = catalogRegistry.get(catalogName)
+                    .orElseThrow(() -> new DefinitionNotFoundException("Unknown catalog: " + catalogName));
+            String defaultKey = pdc.defaultValue();
+            defaultEntry = defaultKey != null ? catalog.entries().get(defaultKey) : null;
+        }
+
+        List<ResolvedGroup.Entry> entries = new ArrayList<>(values.size());
+        for (String value : values) {
+            String shown = value;
+            if (catalog != null) {
+                CatalogDefinition.Entry mapped = (value == null)
+                        ? defaultEntry
+                        : catalog.entries().getOrDefault(value, defaultEntry);
+                if (mapped == null) continue;
+                shown = mapped.display();
+            }
+            entries.add(new ResolvedGroup.Entry(
+                    shown,
+                    Placeholder.parsed(pdc.valueName(), shown == null ? "" : shown)
+            ));
+        }
+        return new ResolvedGroup(entries);
     }
 
     private @NotNull ResolvedGroup resolveBuiltin(
@@ -102,7 +150,6 @@ public class GroupService {
                     Placeholder.parsed("ench_level_roman", toRoman(level))
             );
 
-            // value: namespaced key, e.g. "minecraft:sharpness"
             entries.add(new ResolvedGroup.Entry(enchantment.key().asString(), resolver));
         }
 
@@ -154,77 +201,24 @@ public class GroupService {
         return new ResolvedGroup(entries);
     }
 
-    private static @NotNull String formatValue(double value) {
-        DecimalFormat df = new DecimalFormat("0.##", DecimalFormatSymbols.getInstance(Locale.ROOT));
-        return df.format(value);
-    }
+    public void set(@NotNull ItemStack itemStack, @NotNull String name, @NotNull List<@Nullable String> values) {
+        var definition = groupRegistry.get(name)
+                .orElseThrow(() -> new DefinitionNotFoundException("Unknown group: " + name));
 
-    private @NotNull ResolvedGroup resolvePdc(
-            @NotNull GroupDefinition.Source.PDC pdc,
-            @NotNull ItemStack itemStack,
-            boolean rawValues
-    ) {
-        var container = itemStack.getPersistentDataContainer();
-        NamespacedKey key = new NamespacedKey(plugin, "group_" + pdc.key());
-
-        String raw = container.get(key, PersistentDataType.STRING);
-        if (raw == null || raw.isEmpty()) {
-            return ResolvedGroup.empty();
-        }
-        
-        String[] split = raw.split(LIST_SEPARATOR);
-        
-        List<String> values = new ArrayList<>(split.length);
-        
-        // Map the values to catalog entries
-        String catalogName = pdc.catalog();
-        if (!rawValues && catalogName != null) {
-            CatalogDefinition catalog = catalogRegistry.get(catalogName)
-                    .orElseThrow(() -> new DefinitionNotFoundException("Unknown catalog: " + pdc.catalog()));
-
-            String defaultValueKey = pdc.defaultValue();
-            CatalogDefinition.Entry defaultEntry = (defaultValueKey != null)
-                    ? catalog.entries().get(defaultValueKey)
-                    : null;
-            
-            for (String value : split) {
-                CatalogDefinition.Entry mapped = catalog.entries().getOrDefault(value, defaultEntry);
-                
-                if (mapped == null) continue;
-
-                values.add(mapped.display());
-            }
-        } else {
-            values.addAll(Arrays.asList(split));
-        }
-
-        List<ResolvedGroup.Entry> entries = new ArrayList<>();
-        for (String value : values) {
-            entries.add(new ResolvedGroup.Entry(value, Placeholder.parsed(pdc.valueName(), value)));
-        }
-        
-        return new ResolvedGroup(entries);
-    }
-
-    public void set(@NotNull ItemStack itemStack, @NotNull String name, @NotNull List<String> values) {
-        var definitionOpt = groupRegistry.get(name);
-        if (definitionOpt.isEmpty()) {
-            throw new DefinitionNotFoundException("Unknown group: " + name);
-        }
-
-        var source = definitionOpt.get().source();
-        if (!(source instanceof GroupDefinition.Source.PDC pdcSource)) {
+        if (!(definition.source() instanceof GroupDefinition.Source.PDC pdc)) {
             throw new NotPdcBackedException("Group '" + name + "' is not PDC-backed and cannot be set");
         }
 
-        itemStack.editMeta(meta -> {
-            var container = meta.getPersistentDataContainer();
-            container.set(new NamespacedKey(plugin, "group_" + pdcSource.key()), PersistentDataType.STRING, encodeList(values));
-        });
+        List<NullableString> wrapped = new ArrayList<>(values.size());
+        for (String v : values) wrapped.add(new NullableString(v));
+
+        itemStack.editMeta(meta ->
+                meta.getPersistentDataContainer().set(keyFor(pdc), listType, wrapped));
     }
 
-    public static @NotNull String encodeList(@NotNull List<String> values) {
-        return String.join(LIST_SEPARATOR, values);
+    private static @NotNull String formatValue(double value) {
+        DecimalFormat df = new DecimalFormat("0.##", DecimalFormatSymbols.getInstance(Locale.ROOT));
+        return df.format(value);
     }
 
     private static @NotNull String toRoman(int level) {
