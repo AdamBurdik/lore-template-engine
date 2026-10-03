@@ -182,8 +182,10 @@ public class GroupService {
             CatalogDefinition catalog = catalogRegistry.get(catalogName)
                     .orElseThrow(() -> new DefinitionNotFoundException("Unknown catalog: " + pdc.catalog()));
 
-            CatalogDefinition.Entry defaultEntry = catalog.entries()
-                    .get(pdc.defaultValue());
+            String defaultValueKey = pdc.defaultValue();
+            CatalogDefinition.Entry defaultEntry = (defaultValueKey != null)
+                    ? catalog.entries().get(defaultValueKey)
+                    : null;
             
             for (String value : split) {
                 CatalogDefinition.Entry mapped = catalog.entries().getOrDefault(value, defaultEntry);
