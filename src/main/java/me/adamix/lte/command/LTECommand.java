@@ -23,6 +23,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @CommandAlias("lore|lte")
@@ -92,7 +93,12 @@ public class LTECommand extends BaseCommand {
     @Subcommand("group add")
     @CommandCompletion("@groups @groupValues")
     public void addGroupValue(@NotNull Player player, @NotNull String name, @NotNull String... args) {
-        List<String> toAdd = splitLines(String.join(" ", args));
+        List<String> rawInput = splitLines(String.join(" ", args));
+
+        List<String> toAdd = rawInput.stream()
+                .map(arg -> arg.equalsIgnoreCase("null") ? null : arg)
+                .toList();
+        
         ItemStack itemStack = player.getInventory().getItemInMainHand();
 
         if (executeGroupAction(player, () -> {
@@ -118,8 +124,15 @@ public class LTECommand extends BaseCommand {
             if (targetIndex < 0 || targetIndex >= current.size()) {
                 throw new IllegalArgumentException("Index " + index + " is out of bounds for group size " + current.size());
             }
-
-            current.set(targetIndex, value);
+            
+            String toAdd;
+            if (value.equalsIgnoreCase("null")) {
+                toAdd = null;
+            } else {
+                toAdd = value;
+            }
+            
+            current.set(targetIndex, toAdd);
             groupService.set(itemStack, name, current);
         })) {
             templateService.rebuild(itemStack);
