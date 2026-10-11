@@ -26,7 +26,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
-@CommandAlias("lore|lte")
+@CommandAlias("lte")
+@CommandPermission("lte.command")
 public class LTECommand extends BaseCommand {
     private final LTEPlugin plugin;
     private final TemplateService templateService;
@@ -57,6 +58,7 @@ public class LTECommand extends BaseCommand {
 
     @Subcommand("set template")
     @CommandCompletion("@templates")
+    @CommandPermission("lte.command.set.template")
     public void apply(@NotNull Player player, @NotNull String templateId) {
         ItemStack itemStack = player.getInventory().getItemInMainHand();
         templateService.apply(templateId, itemStack);
@@ -64,6 +66,7 @@ public class LTECommand extends BaseCommand {
 
     @Subcommand("set variable")
     @CommandCompletion("@variables @variableLookupValues")
+    @CommandPermission("lte.command.set.variable")
     public void setVariable(@NotNull Player player, @NotNull String name, @NotNull String value) {
         ItemStack itemStack = player.getInventory().getItemInMainHand();
 
@@ -80,6 +83,7 @@ public class LTECommand extends BaseCommand {
 
     @Subcommand("group set")
     @CommandCompletion("@groups @groupValues")
+    @CommandPermission("lte.command.group.set")
     public void setGroup(@NotNull Player player, @NotNull String name, @NotNull String... args) {
         List<String> values = splitLines(String.join(" ", args));
         ItemStack itemStack = player.getInventory().getItemInMainHand();
@@ -92,6 +96,7 @@ public class LTECommand extends BaseCommand {
 
     @Subcommand("group add")
     @CommandCompletion("@groups @groupValues")
+    @CommandPermission("lte.command.group.add")
     public void addGroupValue(@NotNull Player player, @NotNull String name, @NotNull String... args) {
         List<String> rawInput = splitLines(String.join(" ", args));
 
@@ -113,6 +118,7 @@ public class LTECommand extends BaseCommand {
 
     @Subcommand("group setslot")
     @CommandCompletion("@groups 1|2|3|4 @groupValues")
+    @CommandPermission("lte.command.group.setslot")
     public void setGroupSlot(@NotNull Player player, @NotNull String name, int index, @NotNull String value) {
         ItemStack itemStack = player.getInventory().getItemInMainHand();
 
@@ -142,6 +148,7 @@ public class LTECommand extends BaseCommand {
 
     @Subcommand("group removeat")
     @CommandCompletion("@groups 1|2|3|4")
+    @CommandPermission("lte.command.group.removeat")
     public void removeGroupSlot(@NotNull Player player, @NotNull String name, int index) {
         ItemStack itemStack = player.getInventory().getItemInMainHand();
 
@@ -164,6 +171,7 @@ public class LTECommand extends BaseCommand {
 
     @Subcommand("group remove")
     @CommandCompletion("@groups @groupValues")
+    @CommandPermission("lte.command.group.remove")
     public void removeGroupValue(@NotNull Player player, @NotNull String name, @NotNull String value) {
         ItemStack itemStack = player.getInventory().getItemInMainHand();
 
@@ -182,6 +190,7 @@ public class LTECommand extends BaseCommand {
 
     @Subcommand("group clear")
     @CommandCompletion("@groups")
+    @CommandPermission("lte.command.group.clear")
     public void clearGroup(@NotNull Player player, @NotNull String name) {
         ItemStack itemStack = player.getInventory().getItemInMainHand();
 
