@@ -22,7 +22,7 @@ template "vanilla"{
 	}
 }
 
-template "vanilla_extended" extends="vanilla" tooltip-style="simple" {
+template "vanilla_extended" extends="vanilla" {
 	var "rarity"
 
 	insert "enchantments"
@@ -30,6 +30,15 @@ template "vanilla_extended" extends="vanilla" tooltip-style="simple" {
 
 	blank collapse-if-empty="description"
 	group "description" each="<gray><line>" empty="skip"
+}
+
+template "vanilla_custom" extends="vanilla" tooltip-style="simple" {
+}
+
+template "vanilla_with_gems" extends="vanilla" {
+	blank collapse-if-empty="gem_sockets"
+	text "<gray>Gem Sockets:" collapse-if-empty="gem_sockets"
+	group "gem_sockets" each="<gem_socket>" empty="skip"
 }
 
 template "weapon_default" {
@@ -42,10 +51,4 @@ template "weapon_default" {
 	text "<gray>When in Main Hand:" collapse-if-empty="attributes-main-hand"
 	group "attributes-main-hand" each=" <attr_color><attr_value> <attr_name>" empty="skip"
 	text "<red>This is footer!"
-}
-
-template "gems_sockets" {
-	blank collapse-if-empty="gem_sockets"
-	text "<gray>Gem Sockets:" collapse-if-empty="gem_sockets"
-	group "gem_sockets" each="<gem_socket>" empty="skip"
 }

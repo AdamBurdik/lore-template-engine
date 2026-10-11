@@ -3,6 +3,9 @@ catalog "gems" {
 		display "<dark_gray>[ ] Empty Socket"
 	}
 	entry "chipped_ruby" {
-		display "<red>Chipped Ruby"
+		display "<gray>Chipped Ruby"
+	}
+	entry "pristine_ruby" {
+		display "<aqua>Pristine Ruby"
 	}
 }
