@@ -98,6 +98,9 @@ public class TemplateService {
         String style = template.tooltipStyle();
         if (style != null) {
             itemStack.setData(DataComponentTypes.TOOLTIP_STYLE, Key.key(style));
+        } else {
+            // Removes the tooltip in case its set.
+            itemStack.unsetData(DataComponentTypes.TOOLTIP_STYLE);
         }
     }
     
