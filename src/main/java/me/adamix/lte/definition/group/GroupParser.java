@@ -1,10 +1,14 @@
 package me.adamix.lte.definition.group;
 
-import dev.kdl.KdlDocument;
-import dev.kdl.KdlNode;
-import dev.kdl.parse.KdlParseException;
-import dev.kdl.parse.KdlParser;
-import me.adamix.lte.api.exception.TemplateParsingException;
+import me.adamix.kidl.Cardinality;
+import me.adamix.kidl.Cursor;
+import me.adamix.kidl.Kidl;
+import me.adamix.kidl.diagnostic.Diagnostic;
+import me.adamix.kidl.diagnostic.FileSpan;
+import me.adamix.kidl.error.DiagnosticError;
+import me.adamix.kidl.validator.Context;
+import me.adamix.kidl.view.ChildKind;
+import me.adamix.lte.LteErrors;
 import org.bukkit.inventory.EquipmentSlotGroup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -12,168 +16,239 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 public class GroupParser {
-    public @NotNull List<GroupDefinition> parseFile(
-            @NotNull Path path
-    ) throws KdlParseException, IOException, TemplateParsingException {
-        var parser = KdlParser.v2();
-        var document = parser.parse(path);
-        return parseDocument(document);
+    private final Kidl kidl = Kidl.builder()
+            .ansiRenderer()
+            .standardExceptionTranslation()
+            .build();
+
+    enum GroupChild implements ChildKind {
+        BUILTIN("builtin", Cardinality.OPTIONAL),
+        SOURCE("source", Cardinality.OPTIONAL),
+        VALUE_NAME("value-name", Cardinality.OPTIONAL),
+        TRANSFORMER("transformer", Cardinality.OPTIONAL);
+
+        private final String id;
+        private final Cardinality cardinality;
+
+        GroupChild(String id, Cardinality cardinality) {
+            this.id = id;
+            this.cardinality = cardinality;
+        }
+
+        @Override
+        public String id() {
+            return id;
+        }
+
+        @Override
+        public Cardinality cardinality() {
+            return cardinality;
+        }
     }
 
-    public @NotNull List<GroupDefinition> parseDocument(@NotNull KdlDocument document)
-            throws TemplateParsingException {
+    public @NotNull List<GroupDefinition> parseFile(@NotNull Path path) throws IOException {
         List<GroupDefinition> definitions = new ArrayList<>();
+        Map<String, FileSpan> spans = new HashMap<>();
 
-        for (KdlNode node : document.nodes()) {
-            if (node.name().equals("group")) {
-                definitions.add(parseGroupNode(node));
+        var result = kidl.load(path, (id, ctx, cursor) -> {
+            if (!id.equals("group")) return;
+
+            String groupName = cursor.arguments().getString(0);
+            if (groupName == null) return;
+
+            GroupDefinition definition = parseGroup(cursor, ctx);
+            if (definition == null) return;
+
+            FileSpan previous = spans.putIfAbsent(groupName, cursor.span());
+            if (previous != null) {
+                report(
+                        ctx,
+                        LteErrors.DUPLICATE_GROUP,
+                        "group `" + groupName + "` is defined more than once",
+                        cursor.span(),
+                        "redefined here"
+                );
+                return;
             }
+
+            definitions.add(definition);
+        });
+
+        if (result.hasErrors()) {
+            throw new IllegalStateException("Group configuration contains errors");
         }
 
         return List.copyOf(definitions);
     }
 
-    private @NotNull GroupDefinition parseGroupNode(
-            @NotNull KdlNode groupNode
-    ) throws TemplateParsingException {
-        String groupName = extractSingleStringArgument(groupNode, "group node");
+    private @Nullable GroupDefinition parseGroup(@NotNull Cursor cursor, @NotNull Context ctx) {
+        String groupName = cursor.arguments().getString(0);
+        if (groupName == null) return null;
 
-        GroupDefinition.Source.Builtin builtinSource = null;
+        var children = cursor.children(GroupChild.class);
+
+        var builtinCursor = children.get(GroupChild.BUILTIN).orElse(null);
+        var sourceCursor = children.get(GroupChild.SOURCE).orElse(null);
+
+        String valueName = children.get(GroupChild.VALUE_NAME)
+                .map(child -> child.arguments().getString(0))
+                .orElse(null);
+
+        var transformerCursor = children.get(GroupChild.TRANSFORMER).orElse(null);
+        TransformerBinding transformer = null;
+        if (transformerCursor != null) {
+            String transformerName = transformerCursor.arguments().getString(0);
+            if (transformerName != null) {
+                String key = transformerCursor.properties().optString("key").orElse(null);
+                transformer = new TransformerBinding(transformerName, key);
+            }
+        }
+
+        GroupDefinition.Source.Builtin builtin = null;
+        if (builtinCursor != null) {
+            builtin = parseBuiltin(builtinCursor, ctx);
+        }
+
+        String sourceId = null;
         String pdcKey = null;
-        String pdcType = null;
-        String valueName = null;
-        String catalog = null;
-        String defaultValue = null;
-
-        for (KdlNode child : groupNode.children()) {
-            switch (child.name()) {
-                case "builtin" -> {
-                    if (builtinSource != null) {
-                        throw new TemplateParsingException("Group '" + groupName + "' has duplicate 'builtin' definitions");
-                    }
-                    builtinSource = parseBuiltinNode(child, groupName);
+        if (sourceCursor != null) {
+            sourceId = sourceCursor.arguments().getString(0);
+            if ("pdc".equals(sourceId)) {
+                pdcKey = sourceCursor.properties().getString("key");
+                sourceCursor.properties().optString("type");
+            } else {
+                sourceCursor.properties().optString("key");
+                sourceCursor.properties().optString("type");
+                if (sourceId != null) {
+                    report(
+                            ctx,
+                            LteErrors.GROUP_UNKNOWN_SOURCE,
+                            "unknown group source `" + sourceId + "`",
+                            sourceCursor.span(),
+                            "only `pdc` is supported"
+                    );
                 }
-                case "source" -> {
-                    String sourceId = extractSingleStringArgument(child, "'source' node in group '" + groupName + "'");
-                    if (!sourceId.equals("pdc")) {
-                        throw new TemplateParsingException("Unknown source type: '" + sourceId + "' in group '" + groupName + "'");
-                    }
-
-                    pdcKey = extractPropertyString(child, "key", "PDC source in group '" + groupName + "'");
-                    pdcType = extractOptionalPropertyString(child, "type");
-                }
-                case "value-name" -> {
-                    if (valueName != null) {
-                        throw new TemplateParsingException("Duplicate 'value-name' in group '" + groupName + "'");
-                    }
-                    valueName = extractSingleStringArgument(child, "'value-name' node in group '" + groupName + "'");
-                }
-                case "catalog" -> {
-                    if (catalog != null) {
-                        throw new TemplateParsingException("Duplicate 'catalog' in group '" + groupName + "'");
-                    }
-                    catalog = extractSingleStringArgument(child, "'catalog' node in group '" + groupName + "'");
-                }
-                case "default" -> {
-                    if (defaultValue != null) {
-                        throw new TemplateParsingException("Duplicate 'default' in group '" + groupName + "'");
-                    }
-                    defaultValue = extractSingleStringArgument(child, "'default' node in group '" + groupName + "'");
-                }
-                default -> throw new TemplateParsingException(
-                        "Unknown node '" + child.name() + "' inside group '" + groupName + "'"
-                );
             }
         }
 
-        // Validate Builtin vs PDC source configuration
-        if (builtinSource != null) {
-            if (pdcKey != null || valueName != null || catalog != null || defaultValue != null) {
-                throw new TemplateParsingException(
-                        "Group '" + groupName + "' defines 'builtin' but also includes PDC/catalog settings"
+        if (builtin != null) {
+            if (sourceCursor != null || valueName != null) {
+                report(
+                        ctx,
+                        LteErrors.GROUP_SOURCE_CONFLICT,
+                        "group `" + groupName + "` defines `builtin` together with PDC settings",
+                        cursor.span(),
+                        "use either `builtin` or a `source` definition"
                 );
+                return null;
             }
-            return new GroupDefinition(groupName, builtinSource);
+
+            if (transformer != null && transformer.key() == null) {
+                report(
+                        ctx,
+                        LteErrors.GROUP_TRANSFORMER_KEY_REQUIRED,
+                        "group `" + groupName + "` uses a transformer with a builtin source but has no `key`",
+                        transformerCursor.span(),
+                        "add `key=\"...\"` to the `transformer` child"
+                );
+                return null;
+            }
+
+            return new GroupDefinition(groupName, builtin, transformer);
         }
 
-        if (pdcKey != null) {
-            if (valueName == null) {
-                throw new TemplateParsingException("Group '" + groupName + "' using PDC source requires a 'value-name'");
-            }
-            return new GroupDefinition(
-                    groupName,
-                    new GroupDefinition.Source.PDC(pdcKey, valueName, catalog, defaultValue)
+        if (sourceCursor == null) {
+            report(
+                    ctx,
+                    LteErrors.GROUP_MISSING_SOURCE,
+                    "group `" + groupName + "` does not define a source",
+                    cursor.span(),
+                    "add a `builtin` or `source` child"
             );
+            return null;
         }
 
-        throw new TemplateParsingException("Group '" + groupName + "' must specify a valid source (builtin or PDC)");
+        if (!"pdc".equals(sourceId)) {
+            return null;
+        }
+
+        if (pdcKey == null) {
+            return null;
+        }
+
+        if (valueName == null) {
+            report(
+                    ctx,
+                    LteErrors.GROUP_MISSING_VALUE_NAME,
+                    "group `" + groupName + "` using a PDC source requires a `value-name`",
+                    cursor.span(),
+                    "add a `value-name` child"
+            );
+            return null;
+        }
+
+        if (transformer != null && transformer.key() != null) {
+            report(
+                    ctx,
+                    LteErrors.GROUP_TRANSFORMER_KEY_UNEXPECTED,
+                    "group `" + groupName + "` uses a transformer with a PDC source and a `key`",
+                    transformerCursor.span(),
+                    "remove `key`; PDC groups transform their stored values directly"
+            );
+            return null;
+        }
+
+        return new GroupDefinition(
+                groupName,
+                new GroupDefinition.Source.PDC(pdcKey, valueName),
+                transformer
+        );
     }
 
-    private @NotNull GroupDefinition.Source.Builtin parseBuiltinNode(
-            @NotNull KdlNode builtinNode,
-            @NotNull String groupName
-    ) throws TemplateParsingException {
-        String builtinName = extractSingleStringArgument(builtinNode, "'builtin' node in group '" + groupName + "'");
-        String slot = null;
+    private @Nullable GroupDefinition.Source.Builtin parseBuiltin(
+            @NotNull Cursor builtinCursor,
+            @NotNull Context ctx
+    ) {
+        String builtinName = builtinCursor.arguments().getString(0);
+        if (builtinName == null) return null;
 
-        var slotProp = builtinNode.getProperty("slot");
-        if (slotProp.isPresent()) {
-            if (!slotProp.get().isString()) {
-                throw new TemplateParsingException("Builtin 'slot' property must be a string in group '" + groupName + "'");
-            }
-            String rawSlot = (String) slotProp.get().value();
+        String rawSlot = builtinCursor.properties().optString("slot").orElse(null);
+        String slot = null;
+        if (rawSlot != null) {
             slot = normalizeSlot(rawSlot);
             if (slot == null) {
-                throw new TemplateParsingException("Unknown builtin slot '" + rawSlot + "' for group '" + groupName + "'");
+                report(
+                        ctx,
+                        LteErrors.GROUP_UNKNOWN_SLOT,
+                        "unknown builtin slot `" + rawSlot + "`",
+                        builtinCursor.span(),
+                        "not a recognised equipment slot"
+                );
             }
         }
 
         return new GroupDefinition.Source.Builtin(builtinName, slot);
     }
 
-    private @NotNull String extractSingleStringArgument(
-            @NotNull KdlNode node,
-            @NotNull String context
-    ) throws TemplateParsingException {
-        var args = node.arguments();
-        if (args.isEmpty()) {
-            throw new TemplateParsingException("Expected a string argument for " + context + ", but none was provided");
-        }
-
-        var arg = args.getFirst();
-        if (!arg.isString() || !(arg.value() instanceof String strVal)) {
-            throw new TemplateParsingException("Argument for " + context + " must be a valid string");
-        }
-
-        return strVal;
-    }
-
-    private @NotNull String extractPropertyString(
-            @NotNull KdlNode node,
-            @NotNull String propertyKey,
-            @NotNull String context
-    ) throws TemplateParsingException {
-        var prop = node.getProperty(propertyKey);
-        if (prop.isEmpty() || !prop.get().isString() || !(prop.get().value() instanceof String strVal)) {
-            throw new TemplateParsingException("Property '" + propertyKey + "' is required and must be a string in " + context);
-        }
-        return strVal;
-    }
-
-    private @Nullable String extractOptionalPropertyString(@NotNull KdlNode node, @NotNull String propertyKey) {
-        var prop = node.getProperty(propertyKey);
-        if (prop.isPresent() && prop.get().isString() && prop.get().value() instanceof String strVal) {
-            return strVal;
-        }
-        return null;
-    }
-
     private static @Nullable String normalizeSlot(@NotNull String raw) {
-        String key = raw.trim().toLowerCase().replace("-", "").replace("_", "");
+        String key = raw.trim().toLowerCase(Locale.ROOT).replace("-", "").replace("_", "");
         EquipmentSlotGroup group = EquipmentSlotGroup.getByName(key);
         return group != null ? group.toString() : null;
+    }
+
+    private static void report(
+            @NotNull Context ctx,
+            @NotNull DiagnosticError error,
+            @NotNull String message,
+            @NotNull FileSpan span,
+            @NotNull String label
+    ) {
+        ctx.addDiagnostic(Diagnostic.of(error, message, span, label));
     }
 }

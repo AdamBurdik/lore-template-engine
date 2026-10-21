@@ -3,6 +3,12 @@ group "enchantments" {
 // exposes: <ench_name>, <ench_level>, <ench_level_roman>
 }
 
+group "styled_enchantments" {
+	builtin "enchantments"
+	transformer "ench_style" key="ench_id"
+// exposes: <ench_id>, <color>, <icon>, <ench_name>, <ench_level>, <ench_level_roman>
+}
+
 group "attributes" {
 	builtin "attributes"
 // exposes: <attr_name>, <attr_value>, <attr_slot>, <attr_color>
@@ -56,8 +62,8 @@ group "description" {
 }
 
 group "gem_sockets" {
-	source "pdc" key="gem_sockets" type="string_list" default="empty"
+	source "pdc" key="gem_sockets" type="string_list"
 	value-name "gem_socket"
-	catalog "gems"
-// exposes: <gem_socket>
+	transformer "gem_lookup"
+// exposes: <gem_socket>, <color>, <icon>, <label>
 }

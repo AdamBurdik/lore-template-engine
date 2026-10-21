@@ -1,6 +1,7 @@
 package me.adamix.lte;
 
 import io.papermc.paper.persistence.PersistentDataContainerView;
+import me.adamix.lte.definition.transformer.TransformerDefinition;
 import me.adamix.lte.definition.variable.ComputedFunction;
 import me.adamix.lte.definition.variable.PdcValueType;
 import me.adamix.lte.definition.variable.VariableDefinition;
@@ -12,6 +13,7 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -20,15 +22,18 @@ public class VariableService {
     private final LTEPlugin plugin;
     private final Registry<VariableDefinition> variableRegistry;
     private final Map<String, ComputedFunction> computedFunctions;
+    private final TransformerService transformerService;
 
     public VariableService(
             @NotNull LTEPlugin plugin,
             @NotNull Registry<VariableDefinition> variableRegistry,
-            @NotNull Map<String, ComputedFunction> computedFunctions
+            @NotNull Map<String, ComputedFunction> computedFunctions,
+            @NotNull TransformerService transformerService
     ) {
         this.plugin = plugin;
         this.variableRegistry = variableRegistry;
         this.computedFunctions = computedFunctions;
+        this.transformerService = transformerService;
     }
 
     public @NotNull Optional<VariableValue> getRawValue(
@@ -59,7 +64,7 @@ public class VariableService {
         };
     }
 
-    public @NotNull Optional<String> getDisplayValue(
+    public @NotNull Optional<ResolvedVariable> resolve(
             @NotNull String name,
             @NotNull ItemStack itemStack
     ) {
@@ -67,12 +72,29 @@ public class VariableService {
         if (raw.isEmpty()) return Optional.empty();
 
         String stringified = VariableValue.stringify(raw.get());
-
         VariableDefinition definition = variableRegistry.get(name).orElseThrow();
-        if (definition.lookup() != null) {
-            return definition.lookup().get(stringified);
+
+        Map<String, String> fields = new LinkedHashMap<>();
+        fields.put("value", stringified);
+
+        if (definition.transformer() != null) {
+            Optional<TransformerDefinition.Entry> entry =
+                    transformerService.resolve(definition.transformer(), stringified);
+            if (entry.isEmpty()) return Optional.empty();
+
+            fields.putAll(entry.get().fields());
         }
-        return Optional.of(stringified);
+
+        return Optional.of(new ResolvedVariable(stringified, fields));
+    }
+
+    public record ResolvedVariable(
+            @NotNull String raw,
+            @NotNull Map<String, String> fields
+    ) {
+        public ResolvedVariable {
+            fields = Map.copyOf(fields);
+        }
     }
 
     public void setValue(

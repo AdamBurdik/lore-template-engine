@@ -23,7 +23,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @CommandAlias("lte")
@@ -65,7 +64,7 @@ public class LTECommand extends BaseCommand {
     }
 
     @Subcommand("set variable")
-    @CommandCompletion("@variables @variableLookupValues")
+    @CommandCompletion("@variables @variableValues")
     @CommandPermission("lte.command.set.variable")
     public void setVariable(@NotNull Player player, @NotNull String name, @NotNull String value) {
         ItemStack itemStack = player.getInventory().getItemInMainHand();

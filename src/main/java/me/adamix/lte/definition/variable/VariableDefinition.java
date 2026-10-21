@@ -6,7 +6,7 @@ import org.jetbrains.annotations.Nullable;
 public record VariableDefinition(
         @NotNull String name,
         @NotNull Source source,
-        @Nullable Lookup lookup
+        @Nullable String transformer
 ) {
     public sealed interface Source {
         record Pdc(

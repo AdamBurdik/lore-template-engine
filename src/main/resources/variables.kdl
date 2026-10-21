@@ -1,13 +1,6 @@
 variable "rarity" {
 	source "pdc" key="rarity" type="string" default="common"
-	lookup {
-		"common" "<gray>Common"
-		"uncommon" "<green>Uncommon"
-		"rare" "<blue>Rare"
-		"epic" "<light_purple><bold>Epic"
-		"legendary" "<gold><bold>Legendary"
-	}
-	fallback "<gray>Unknown"
+	transformer "rarity_lookup"
 }
 
 variable "item_level" {

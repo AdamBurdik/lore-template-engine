@@ -12,6 +12,7 @@ Items get a template ID (saved in PDC). The lore is built from that template eve
 - Lore layouts defined in config
 - Templates can extend other templates
 - Variables (for example `rarity`) and groups (lists of lines)
+- Transformers for mapping values to colors, icons, and labels
 - Lines can hide themselves when a group is empty (`collapse-if-empty`)
 - Sections you can reuse with `insert`
 - Vanilla-style enchantments and attributes
@@ -34,7 +35,7 @@ template "vanilla" {
 }
 
 template "vanilla_extended" extends="vanilla" {
-	var "rarity"
+	var "rarity" display="<color><label>"
 
 	insert "enchantments"
 	insert "attributes"
@@ -45,6 +46,46 @@ template "vanilla_extended" extends="vanilla" {
 ```
 
 `vanilla_extended` uses everything from `vanilla` and adds a description at the bottom.
+
+## Transformers
+
+A transformer maps variable or group values to `color`, `icon`, and `label` fields. Values without an
+entry use the transformer's `fallback`; if there is no fallback, the variable or group entry is
+omitted.
+
+```
+transformer "rarity_lookup" {
+	entry "legendary" {
+		color "<gold><bold>"
+		label "Legendary"
+	}
+	fallback {
+		color "<gray>"
+		label "Unknown"
+	}
+}
+```
+
+Bind a transformer to a PDC group directly, or to a builtin group with `key` naming the field to
+transform:
+
+```
+variable "rarity" {
+	source "pdc" key="rarity" type="string" default="common"
+	transformer "rarity_lookup"
+}
+
+group "styled_enchantments" {
+	builtin "enchantments"
+	transformer "ench_style" key="ench_id"
+}
+```
+
+When a variable uses a transformer, its `display` is required in the template because the raw value
+is otherwise not shown.
+
+> **Breaking change:** `lookup`, `catalog`, and the group `default` option have been removed. Migrate
+> them to `transformer` definitions. Existing server configs are not overwritten automatically.
 
 ## Requirements
 

@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "me.adamix.loretemplateengine"
-version = "0.6.1"
+version = "0.7.0"
 
 repositories {
     gradlePluginPortal()
@@ -29,11 +29,17 @@ dependencies {
     compileOnly("org.projectlombok:lombok:1.18.48")
     annotationProcessor("org.projectlombok:lombok:1.18.48")
     compileOnly("net.dmulloy2:ProtocolLib:5.4.0")
-    implementation("com.github.kdl-org:kdl4j:v1.0.1")
+    implementation("com.github.AdamBurdik:kdl4j:19afde84f4")
+    implementation("com.github.AdamBurdik:kidl:30937d85e1")
     implementation("co.aikar:acf-paper:0.5.1-SNAPSHOT")
 
     // Integrations
     compileOnly("com.nexomc:nexo:1.25.0")
+
+    testImplementation(platform("org.junit:junit-bom:6.0.0"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("io.papermc.paper:paper-api:26.1.2.build.74-stable")
 }
 
 tasks {
@@ -49,6 +55,10 @@ tasks {
     
     build {
         dependsOn(shadowJar)
+    }
+
+    test {
+        useJUnitPlatform()
     }
 }
 

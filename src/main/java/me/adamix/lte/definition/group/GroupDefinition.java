@@ -5,8 +5,13 @@ import org.jetbrains.annotations.Nullable;
 
 public record GroupDefinition(
         @NotNull String name,
-        @NotNull Source source
+        @NotNull Source source,
+        @Nullable TransformerBinding transformer
 ) {
+    public GroupDefinition(@NotNull String name, @NotNull Source source) {
+        this(name, source, null);
+    }
+
     public sealed interface Source {
         record Builtin(@NotNull String name, @Nullable String slot) implements Source {
             public Builtin(@NotNull String name) {
@@ -15,9 +20,7 @@ public record GroupDefinition(
         }
         record PDC(
                 @NotNull String key,
-                @NotNull String valueName,
-                @Nullable String catalog,
-                @Nullable String defaultValue // maps nulls/unmapped values to a catalog entry
+                @NotNull String valueName
         ) implements Source {}
     }
 }

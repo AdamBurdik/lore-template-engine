@@ -8,10 +8,10 @@ import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class LoreRenderer {
     private final VariableService variableService;
@@ -33,21 +33,30 @@ public class LoreRenderer {
 
         for (TemplateElement element : template.elements()) {
             switch (element) {
-                case TemplateElement.Blank(@Nullable String collapseIfEmpty) -> {
+                case TemplateElement.Blank(Optional<String> collapseIfEmpty) -> {
                     if (!shouldRender(collapseIfEmpty, itemStack)) break;
                     lore.add(Component.text(""));
                 }
-                case TemplateElement.Text(String value, @Nullable String collapseIfEmpty) -> {
+                case TemplateElement.Text(String value, Optional<String> collapseIfEmpty) -> {
                     if (!shouldRender(collapseIfEmpty, itemStack)) break;
                     lore.add(LTEPlugin.MINI_MESSAGE.deserialize("<!italic><white>" + value));
                 }
-                case TemplateElement.Variable(String name, String prefix, String suffix) -> {
-                    var variableValue = variableService.getDisplayValue(name, itemStack);
-                    if (variableValue.isEmpty()) break;
+                case TemplateElement.Variable(
+                        String name,
+                        Optional<String> display,
+                        Optional<String> prefix,
+                        Optional<String> suffix
+                ) -> {
+                    var resolved = variableService.resolve(name, itemStack);
+                    if (resolved.isEmpty()) break;
 
-                    String finalValue = (prefix == null ? "" : prefix)
-                            + variableValue.get()
-                            + (suffix == null ? "" : suffix);
+                    String value = display
+                            .map(layout -> TemplateFields.expand(layout, resolved.get().fields()))
+                            .orElse(resolved.get().raw());
+
+                    String finalValue = prefix.orElse("")
+                            + value
+                            + suffix.orElse("");
 
                     lore.add(LTEPlugin.MINI_MESSAGE.deserialize("<!italic><white>" + finalValue));
                 }
@@ -56,7 +65,7 @@ public class LoreRenderer {
                         @NotNull String each,
                         @NotNull TemplateElement.Group.Empty empty,
                         boolean inline,
-                        @Nullable String joiner
+                        Optional<String> joiner
                 ) -> renderGroup(lore, name, each, empty, inline, joiner, itemStack);
 
                 case TemplateElement.Insert insert -> {
@@ -71,9 +80,9 @@ public class LoreRenderer {
         return lore;
     }
 
-    private boolean shouldRender(@Nullable String collapseIfEmptyGroup, @NotNull ItemStack itemStack) {
-        if (collapseIfEmptyGroup == null) return true;
-        return !groupService.resolve(collapseIfEmptyGroup, itemStack).isEmpty();
+    private boolean shouldRender(@NotNull Optional<String> collapseIfEmptyGroup, @NotNull ItemStack itemStack) {
+        if (collapseIfEmptyGroup.isEmpty()) return true;
+        return !groupService.resolve(collapseIfEmptyGroup.get(), itemStack).isEmpty();
     }
 
     private void renderGroup(
@@ -82,31 +91,33 @@ public class LoreRenderer {
             @NotNull String each,
             @NotNull TemplateElement.Group.Empty empty,
             boolean inline,
-            @Nullable String joiner,
+            @NotNull Optional<String> joiner,
             @NotNull ItemStack itemStack
     ) {
         ResolvedGroup resolved = groupService.resolve(name, itemStack);
 
         if (resolved.isEmpty()) {
             switch (empty) {
-                case TemplateElement.Group.Empty.Skip _ -> {}
+                case SKIP, KEEP -> {}
             }
             return;
         }
 
         if (inline) {
-            String sep = joiner != null ? joiner : "";
+            String sep = joiner.orElse("");
             List<Component> rendered = new ArrayList<>();
-            for (TagResolver resolver : resolved.elements()) {
-                rendered.add(LTEPlugin.MINI_MESSAGE.deserialize("<!italic><white>" + each, resolver));
+            for (ResolvedGroup.Entry entry : resolved.entries()) {
+                String line = TemplateFields.expand(each, entry.fields());
+                rendered.add(LTEPlugin.MINI_MESSAGE.deserialize("<!italic><white>" + line, entry.resolver()));
             }
             lore.add(Component.join(
                     JoinConfiguration.separator(LTEPlugin.MINI_MESSAGE.deserialize(sep)),
                     rendered
             ));
         } else {
-            for (TagResolver resolver : resolved.elements()) {
-                lore.add(LTEPlugin.MINI_MESSAGE.deserialize("<!italic><white>" + each, resolver));
+            for (ResolvedGroup.Entry entry : resolved.entries()) {
+                String line = TemplateFields.expand(each, entry.fields());
+                lore.add(LTEPlugin.MINI_MESSAGE.deserialize("<!italic><white>" + line, entry.resolver()));
             }
         }
     }

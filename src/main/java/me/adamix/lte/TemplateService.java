@@ -95,7 +95,7 @@ public class TemplateService {
                 .build()
         );
 
-        String style = template.tooltipStyle();
+        String style = template.tooltipStyle().orElse(null);
         if (style != null) {
             itemStack.setData(DataComponentTypes.TOOLTIP_STYLE, Key.key(style));
         } else {

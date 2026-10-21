@@ -1,16 +1,14 @@
 package me.adamix.lte;
 
 import co.aikar.commands.PaperCommandManager;
-import dev.kdl.parse.KdlParseException;
-import dev.kdl.parse.Reporter;
 import me.adamix.lte.api.LoreTemplateAPI;
 import me.adamix.lte.command.LTECommand;
-import me.adamix.lte.definition.catalog.CatalogDefinition;
-import me.adamix.lte.definition.catalog.CatalogParser;
 import me.adamix.lte.definition.group.GroupDefinition;
 import me.adamix.lte.definition.group.GroupParser;
 import me.adamix.lte.definition.template.LoreTemplateDefinition;
 import me.adamix.lte.definition.template.TemplateParser;
+import me.adamix.lte.definition.transformer.TransformerDefinition;
+import me.adamix.lte.definition.transformer.TransformerParser;
 import me.adamix.lte.definition.variable.VariableDefinition;
 import me.adamix.lte.definition.variable.VariableParser;
 import me.adamix.lte.definition.variable.VariableValue;
@@ -41,11 +39,12 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
     private final Registry<VariableDefinition> variableRegistry = new Registry<>();
     private final Registry<LoreTemplateDefinition> templateRegistry = new Registry<>();
     private final Registry<GroupDefinition> groupRegistry = new Registry<>();
-    private final Registry<CatalogDefinition> catalogRegistry = new Registry<>();
-    
-    
+    private final Registry<TransformerDefinition> transformerRegistry = new Registry<>();
+
+
     private TemplateService templateService;
     private VariableService variableService;
+    private TransformerService transformerService;
     private GroupService groupService;
     private LifecycleService lifecycleService;
     
@@ -54,36 +53,41 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
     public void reload() {
         variableRegistry.clear();
         templateRegistry.clear();
+        groupRegistry.clear();
+        transformerRegistry.clear();
 
         var templateParser = new TemplateParser();
         var variableParser = new VariableParser();
         var groupParser = new GroupParser();
-        var catalogParser = new CatalogParser();
-        
+        var transformerParser = new TransformerParser();
+
         try {
-            var result = templateParser.parseFile(getDataPath().resolve("templates.kdl"));
-            for (LoreTemplateDefinition loreTemplateDefinition : result) {
-                templateRegistry.register(loreTemplateDefinition.id(), loreTemplateDefinition);
+            var transformerResult = transformerParser.parseFile(getDataPath().resolve("transformers.kdl"));
+            for (TransformerDefinition definition : transformerResult) {
+                transformerRegistry.register(definition.name(), definition);
             }
 
             var variableResult = variableParser.parseFile(getDataPath().resolve("variables.kdl"));
             for (VariableDefinition definition : variableResult) {
                 variableRegistry.register(definition.name(), definition);
             }
-            
+
             var groupResult = groupParser.parseFile(getDataPath().resolve("groups.kdl"));
             for (GroupDefinition definition : groupResult) {
                 groupRegistry.register(definition.name(), definition);
             }
-            
-            var catalogResult = catalogParser.parseFile(getDataPath().resolve("catalogs.kdl"));
-            for (CatalogDefinition definition : catalogResult) {
-                catalogRegistry.register(definition.name(), definition);
+
+            var templateResult = templateParser.parseFile(getDataPath().resolve("templates.kdl"));
+            for (LoreTemplateDefinition loreTemplateDefinition : templateResult) {
+                templateRegistry.register(loreTemplateDefinition.id(), loreTemplateDefinition);
             }
 
-        } catch (KdlParseException e) {
-            var report = Reporter.getReport(e, true);
-            System.out.println(report);
+            DefinitionValidator.validate(
+                    transformerRegistry,
+                    variableRegistry,
+                    groupRegistry,
+                    templateRegistry
+            );
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -94,24 +98,26 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
         saveResource("templates.kdl", false);
         saveResource("variables.kdl", false);
         saveResource("groups.kdl", false);
-        saveResource("catalogs.kdl", false);
-        
+        saveResource("transformers.kdl", false);
+
         commandManager = new PaperCommandManager(this);
 
         commandManager.getCommandCompletions().registerCompletion("templates", _ -> templateRegistry.keySet());
         commandManager.getCommandCompletions().registerCompletion("variables", _ -> variableRegistry.keySet());
         commandManager.getCommandCompletions().registerCompletion("groups", _ -> groupRegistry.keySet());
-        commandManager.getCommandCompletions().registerCompletion("variableLookupValues", c -> {
+        commandManager.getCommandCompletions().registerCompletion("variableValues", c -> {
             var args = c.getArgs();
             if (args.isEmpty()) return Set.of();
 
             var definitionOpt = variableRegistry.get(args.getFirst());
             if (definitionOpt.isEmpty()) return Set.of();
 
-            var lookup = definitionOpt.get().lookup();
-            if (lookup == null) return Set.of();
-            
-            return lookup.entries().keySet();
+            String transformer = definitionOpt.get().transformer();
+            if (transformer == null) return Set.of();
+
+            return transformerService.get(transformer)
+                    .map(definition -> definition.entries().keySet())
+                    .orElse(Set.of());
         });
         commandManager.getCommandCompletions().registerCompletion("groupValues", c -> {
             var args = c.getArgs();
@@ -121,23 +127,17 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
             var groupOpt = groupRegistry.get(groupName);
             if (groupOpt.isEmpty()) return Set.of();
 
-            var group = groupOpt.get();
-            if (group.source() instanceof me.adamix.lte.definition.group.GroupDefinition.Source.PDC pdcSource) {
-                String catalogName = pdcSource.catalog();
-                if (catalogName != null) {
-                    var catalogOpt = catalogRegistry.get(catalogName);
-                    if (catalogOpt.isPresent()) {
-                        return catalogOpt.get().entries().values().stream()
-                                .map(CatalogDefinition.Entry::id)
-                                .toList();
-                    }
-                }
-            }
-            return Set.of();
+            var transformer = groupOpt.get().transformer();
+            if (transformer == null) return Set.of();
+
+            return transformerService.get(transformer.name())
+                    .map(definition -> definition.entries().keySet())
+                    .orElse(Set.of());
         });
-        
-        variableService = new VariableService(this, variableRegistry, new HashMap<>());
-        groupService = new GroupService(this, groupRegistry, catalogRegistry);
+
+        transformerService = new TransformerService(transformerRegistry);
+        variableService = new VariableService(this, variableRegistry, new HashMap<>(), transformerService);
+        groupService = new GroupService(this, groupRegistry, transformerService);
         templateService = new TemplateService(this, templateRegistry, variableService, groupService);
         lifecycleService = new LifecycleService(templateService);
 

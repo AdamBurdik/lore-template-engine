@@ -23,7 +23,7 @@ template "vanilla"{
 }
 
 template "vanilla_extended" extends="vanilla" {
-	var "rarity"
+	var "rarity" display="<color><label>"
 
 	insert "enchantments"
 	insert "attributes"
@@ -32,13 +32,18 @@ template "vanilla_extended" extends="vanilla" {
 	group "description" each="<gray><line>" empty="skip"
 }
 
+template "vanilla_styled" extends="vanilla" {
+	group "styled_enchantments" each="<color><icon><ench_name> <ench_level_roman>" empty="skip"
+	insert "attributes"
+}
+
 template "vanilla_custom" extends="vanilla" tooltip-style="simple" {
 }
 
 template "vanilla_with_gems" extends="vanilla" {
 	blank collapse-if-empty="gem_sockets"
 	text "<gray>Gem Sockets:" collapse-if-empty="gem_sockets"
-	group "gem_sockets" each="<gem_socket>" empty="skip"
+	group "gem_sockets" each="<color><icon><label>" empty="skip"
 }
 
 template "weapon_default" {

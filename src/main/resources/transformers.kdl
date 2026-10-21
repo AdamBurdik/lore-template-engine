@@ -1,0 +1,66 @@
+transformer "ench_style" {
+	entry "mending" {
+		color "<gold>"
+		icon "MEN"
+	}
+	entry "protection" {
+		color "<aqua>"
+		icon "PROT"
+	}
+	entry "thorns" {
+		color "<green>"
+		icon "THOR"
+	}
+	fallback {
+		color "<gray>"
+		icon ""
+	}
+}
+
+transformer "rarity_lookup" {
+	entry "common" {
+		color "<gray>"
+		label "Common"
+	}
+	entry "uncommon" {
+		color "<green>"
+		label "Uncommon"
+	}
+	entry "rare" {
+		color "<blue>"
+		label "Rare"
+	}
+	entry "epic" {
+		color "<light_purple><bold>"
+		label "Epic"
+	}
+	entry "legendary" {
+		color "<gold><bold>"
+		label "Legendary"
+	}
+	fallback {
+		color "<gray>"
+		label "Unknown"
+	}
+}
+
+transformer "gem_lookup" {
+	entry "empty" {
+		color "<dark_gray>"
+		icon "[ ] "
+		label "Empty Socket"
+	}
+	entry "chipped_ruby" {
+		color "<gray>"
+		label "Chipped Ruby"
+	}
+	entry "pristine_ruby" {
+		color "<aqua>"
+		label "Pristine Ruby"
+	}
+	fallback {
+		color "<dark_gray>"
+		icon "[ ] "
+		label "Empty Socket"
+	}
+}

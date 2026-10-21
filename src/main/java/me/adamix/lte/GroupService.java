@@ -6,8 +6,9 @@ import io.papermc.paper.datacomponent.item.attribute.AttributeModifierDisplay;
 import me.adamix.lte.api.ResolvedGroup;
 import me.adamix.lte.api.exception.DefinitionNotFoundException;
 import me.adamix.lte.api.exception.NotPdcBackedException;
-import me.adamix.lte.definition.catalog.CatalogDefinition;
 import me.adamix.lte.definition.group.GroupDefinition;
+import me.adamix.lte.definition.group.TransformerBinding;
+import me.adamix.lte.definition.transformer.TransformerDefinition;
 import me.adamix.lte.registry.Registry;
 import me.adamix.lte.types.NullableString;
 import me.adamix.lte.types.NullableStringType;
@@ -26,26 +27,28 @@ import org.jetbrains.annotations.Nullable;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 @SuppressWarnings("UnstableApiUsage")
 public class GroupService {
     private final LTEPlugin plugin;
     private final Registry<GroupDefinition> groupRegistry;
-    private final Registry<CatalogDefinition> catalogRegistry;
+    private final TransformerService transformerService;
     private final PersistentDataType<?, List<NullableString>> listType;
 
     public GroupService(
             LTEPlugin plugin,
             Registry<GroupDefinition> groupRegistry,
-            Registry<CatalogDefinition> catalogRegistry
+            TransformerService transformerService
     ) {
         this.plugin = plugin;
         this.groupRegistry = groupRegistry;
-        this.catalogRegistry = catalogRegistry;
+        this.transformerService = transformerService;
         this.listType = PersistentDataType.LIST.listTypeFrom(new NullableStringType(plugin));
     }
 
@@ -55,7 +58,7 @@ public class GroupService {
 
         return switch (definition.source()) {
             case GroupDefinition.Source.Builtin(String builtin, String slot) ->
-                    resolveBuiltin(builtin, slot, itemStack).values();
+                    resolveBuiltin(builtin, slot, itemStack, definition.transformer()).values();
             case GroupDefinition.Source.PDC pdc -> readValues(pdc, itemStack);
         };
     }
@@ -66,8 +69,8 @@ public class GroupService {
 
         return switch (definition.source()) {
             case GroupDefinition.Source.Builtin(String builtin, String slot) ->
-                    resolveBuiltin(builtin, slot, itemStack);
-            case GroupDefinition.Source.PDC pdc -> resolvePdc(pdc, itemStack);
+                    resolveBuiltin(builtin, slot, itemStack, definition.transformer());
+            case GroupDefinition.Source.PDC pdc -> resolvePdc(pdc, definition.transformer(), itemStack);
         };
     }
 
@@ -92,34 +95,30 @@ public class GroupService {
 
     private @NotNull ResolvedGroup resolvePdc(
             @NotNull GroupDefinition.Source.PDC pdc,
+            @Nullable TransformerBinding transformer,
             @NotNull ItemStack itemStack
     ) {
         List<@Nullable String> values = readValues(pdc, itemStack);
         if (values.isEmpty()) return ResolvedGroup.empty();
 
-        String catalogName = pdc.catalog();
-        CatalogDefinition catalog = null;
-        CatalogDefinition.Entry defaultEntry = null;
-        if (catalogName != null) {
-            catalog = catalogRegistry.get(catalogName)
-                    .orElseThrow(() -> new DefinitionNotFoundException("Unknown catalog: " + catalogName));
-            String defaultKey = pdc.defaultValue();
-            defaultEntry = defaultKey != null ? catalog.entries().get(defaultKey) : null;
-        }
-
         List<ResolvedGroup.Entry> entries = new ArrayList<>(values.size());
         for (String value : values) {
-            String shown = value;
-            if (catalog != null) {
-                CatalogDefinition.Entry mapped = (value == null)
-                        ? defaultEntry
-                        : catalog.entries().getOrDefault(value, defaultEntry);
-                if (mapped == null) continue;
-                shown = mapped.display();
+            Map<String, String> fields = new LinkedHashMap<>();
+            fields.put(pdc.valueName(), value == null ? "" : value);
+
+            if (transformer != null) {
+                Optional<TransformerDefinition.Entry> resolved = transformerService.resolve(
+                        transformer.name(),
+                        value
+                );
+                if (resolved.isEmpty()) continue;
+                fields.putAll(resolved.get().fields());
             }
+
             entries.add(new ResolvedGroup.Entry(
-                    shown,
-                    Placeholder.parsed(pdc.valueName(), shown == null ? "" : shown)
+                    value == null ? "" : value,
+                    fields,
+                    TagResolver.empty()
             ));
         }
         return new ResolvedGroup(entries);
@@ -128,35 +127,51 @@ public class GroupService {
     private @NotNull ResolvedGroup resolveBuiltin(
             @NotNull String builtin,
             @Nullable String slot,
-            @NotNull ItemStack itemStack
+            @NotNull ItemStack itemStack,
+            @Nullable TransformerBinding transformer
     ) {
         return switch (builtin) {
-            case "enchantments" -> resolveEnchantments(itemStack);
-            case "attributes" -> resolveAttributes(itemStack, slot);
+            case "enchantments" -> resolveEnchantments(itemStack, transformer);
+            case "attributes" -> resolveAttributes(itemStack, slot, transformer);
             default -> throw new NoSuchElementException("Unknown builtin group: " + builtin);
         };
     }
 
-    private @NotNull ResolvedGroup resolveEnchantments(@NotNull ItemStack itemStack) {
+    private @NotNull ResolvedGroup resolveEnchantments(
+            @NotNull ItemStack itemStack,
+            @Nullable TransformerBinding transformer
+    ) {
         List<ResolvedGroup.Entry> entries = new ArrayList<>();
 
         for (Map.Entry<Enchantment, Integer> entry : itemStack.getEnchantments().entrySet()) {
             Enchantment enchantment = entry.getKey();
             int level = entry.getValue();
 
+            Map<String, String> fields = new LinkedHashMap<>();
+            fields.put("ench_id", enchantment.getKey().getKey());
+            fields.put("ench_level", String.valueOf(level));
+            fields.put("ench_level_roman", toRoman(level));
+            applyTransformer(fields, transformer);
+
             TagResolver resolver = TagResolver.resolver(
-                    Placeholder.component("ench_name", enchantment.description()),
-                    Placeholder.parsed("ench_level", String.valueOf(level)),
-                    Placeholder.parsed("ench_level_roman", toRoman(level))
+                    Placeholder.component("ench_name", enchantment.description())
             );
 
-            entries.add(new ResolvedGroup.Entry(enchantment.key().asString(), resolver));
+            entries.add(new ResolvedGroup.Entry(
+                    enchantment.key().asString(),
+                    fields,
+                    resolver
+            ));
         }
 
         return new ResolvedGroup(entries);
     }
 
-    private @NotNull ResolvedGroup resolveAttributes(@NotNull ItemStack itemStack, @Nullable String slot) {
+    private @NotNull ResolvedGroup resolveAttributes(
+            @NotNull ItemStack itemStack,
+            @Nullable String slot,
+            @Nullable TransformerBinding transformer
+    ) {
         ItemAttributeModifiers modifiers = itemStack.getData(DataComponentTypes.ATTRIBUTE_MODIFIERS);
         if (modifiers == null) {
             return ResolvedGroup.empty();
@@ -188,17 +203,33 @@ public class GroupService {
             String attrSlot = modifier.getSlotGroup().toString();
             String attrColor = total < 0 ? "<red>" : "<dark_green>";
 
+            Map<String, String> fields = new LinkedHashMap<>();
+            fields.put("attr_value", attrValue);
+            fields.put("attr_slot", attrSlot);
+            fields.put("attr_color", attrColor);
+            applyTransformer(fields, transformer);
+
             TagResolver resolver = TagResolver.resolver(
-                    Placeholder.component("attr_name", attrName),
-                    Placeholder.parsed("attr_value", attrValue),
-                    Placeholder.parsed("attr_slot", attrSlot),
-                    Placeholder.parsed("attr_color", attrColor)
+                    Placeholder.component("attr_name", attrName)
             );
 
-            entries.add(new ResolvedGroup.Entry(attrValue, resolver));
+            entries.add(new ResolvedGroup.Entry(attrValue, fields, resolver));
         }
 
         return new ResolvedGroup(entries);
+    }
+
+    private void applyTransformer(
+            @NotNull Map<String, String> fields,
+            @Nullable TransformerBinding transformer
+    ) {
+        if (transformer == null) return;
+
+        Optional<TransformerDefinition.Entry> resolved = transformerService.resolve(
+                transformer.name(),
+                fields.get(transformer.key())
+        );
+        resolved.ifPresent(entry -> fields.putAll(entry.fields()));
     }
 
     public void set(@NotNull ItemStack itemStack, @NotNull String name, @NotNull List<@Nullable String> values) {

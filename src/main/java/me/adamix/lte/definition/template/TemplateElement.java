@@ -3,23 +3,27 @@ package me.adamix.lte.definition.template;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Optional;
+
 public sealed interface TemplateElement {
-    record Text(@NotNull String value, @Nullable String collapseIfEmpty) implements TemplateElement {}
-    record Blank(@Nullable String collapseIfEmpty) implements TemplateElement {}
+    record Text(@NotNull String value, @NotNull Optional<String> collapseIfEmpty) implements TemplateElement {}
+    record Blank(@NotNull Optional<String> collapseIfEmpty) implements TemplateElement {}
     record Variable(
             @NotNull String name,
-            @Nullable String prefix,
-            @Nullable String suffix
+            @NotNull Optional<String> display,
+            @NotNull Optional<String> prefix,
+            @NotNull Optional<String> suffix
     ) implements TemplateElement {}
     record Group(
             @NotNull String name,
             @NotNull String each,
             @NotNull Empty empty,
             boolean inline,
-            @Nullable String joiner
+            @NotNull Optional<String> joiner
     ) implements TemplateElement {
-        public sealed interface Empty {
-            record Skip() implements Empty {}
+        public enum Empty {
+            SKIP,
+            KEEP;
         }
     }
     record Insert(@NotNull String sectionName) implements TemplateElement {}
