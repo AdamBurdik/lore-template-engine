@@ -1,60 +1,42 @@
 # Lore Template Engine
 
-[![Modrinth](https://img.shields.io/modrinth/dt/loretemplateengine?logo=modrinth)](https://modrinth.com/plugin/loretemplateengine/)
-[![JitPack](https://jitpack.io/v/AdamBurdik/lore-template-engine.svg)](https://jitpack.io/#AdamBurdik/lore-template-engine)
+A Paper plugin for defining custom item lore and tooltip layouts through config.
 
-A Paper plugin for making custom item lore (tooltips) from config templates.
+Tag an item with a template, and its lore is generated from that template whenever the item changes (crafting, enchanting, admin commands, ...).
 
-Items get a template ID (saved in PDC). The lore is built from that template every time the item changes (crafting, enchanting, admin commands, ...).
+![Extended vanilla lore with custom tooltip style](https://github.com/AdamBurdik/lore-template-engine/blob/main/github/extended-vanilla-tooltip-style.png?raw=true)
 
-## Features
+## How it works
 
-- Lore layouts defined in config
-- Templates can extend other templates
-- Variables (for example `rarity`) and groups (lists of lines)
-- Transformers for mapping values to colors, icons, and labels
-- Lines can hide themselves when a group is empty (`collapse-if-empty`)
-- Sections you can reuse with `insert`
-- Vanilla-style enchantments and attributes
-- Nexo support
+The config uses [KDL](https://kdl.dev) and has four parts:
 
-## Example
+- **Variables**: single values read from an item (`rarity`, `item_level`)
+- **Groups**: lists of values read from an item (`enchantments`, `attributes`, `tags`)
+- **Transformers**: map values to `color`, `icon`, and `label` fields
+- **Templates**: arrange variables, groups, and transformer output into a lore layout
 
-```
-template "vanilla" {
-    section "enchantments" {
-		group "enchantments" each="<gray><ench_name> <ench_level_roman>" empty="skip"
-	}
+## Examples
 
-	section "attributes" {
-		blank collapse-if-empty="attributes"
-		text "<gray>When in Main Hand:" collapse-if-empty="attributes-main-hand"
-		group "attributes-main-hand" each=" <attr_color><attr_value> <attr_name>" empty="skip"
-		// ... same for off hand, head, chest, legs, feet
-	}
-}
+**A transformer:**
 
-template "vanilla_extended" extends="vanilla" {
-	var "rarity" display="<color><label>"
-
-	insert "enchantments"
-	insert "attributes"
-
-	blank collapse-if-empty="description"
-	group "description" each="<gray><line>" empty="skip"
-}
-```
-
-`vanilla_extended` uses everything from `vanilla` and adds a description at the bottom.
-
-## Transformers
-
-A transformer maps variable or group values to `color`, `icon`, and `label` fields. Values without an
-entry use the transformer's `fallback`; if there is no fallback, the variable or group entry is
-omitted.
-
-```
+```kdl
 transformer "rarity_lookup" {
+	entry "common" {
+		color "<gray>"
+		label "Common"
+	}
+	entry "uncommon" {
+		color "<green>"
+		label "Uncommon"
+	}
+	entry "rare" {
+		color "<blue>"
+		label "Rare"
+	}
+	entry "epic" {
+		color "<light_purple><bold>"
+		label "Epic"
+	}
 	entry "legendary" {
 		color "<gold><bold>"
 		label "Legendary"
@@ -66,81 +48,91 @@ transformer "rarity_lookup" {
 }
 ```
 
-Bind a transformer to a PDC group directly, or to a builtin group with `key` naming the field to
-transform:
+**A variable using a transformer:**
 
-```
+```kdl
 variable "rarity" {
 	source "pdc" key="rarity" type="string" default="common"
 	transformer "rarity_lookup"
 }
+```
 
-group "styled_enchantments" {
-	builtin "enchantments"
-	transformer "ench_style" key="ench_id"
+When a variable uses a transformer, its `display` is required in the template because the raw value is otherwise not shown:
+
+```kdl
+var "rarity" display="<color><label>"
+```
+
+**A template:**
+
+```kdl
+template "weapon_default" {
+    var "rarity" display="<color><label>"
+
+    blank collapse-if-empty="enchantments"
+    group "enchantments" each="<gray><ench_name> <ench_level_roman>" empty="skip"
+
+    text "<red>Hello, World"
 }
 ```
 
-When a variable uses a transformer, its `display` is required in the template because the raw value
-is otherwise not shown.
+Lines marked with `collapse-if-empty` disappear when their group has nothing to show, so an item without enchantments has no leftover gaps.
 
-> **Breaking change:** `lookup`, `catalog`, and the group `default` option have been removed. Migrate
-> them to `transformer` definitions. Existing server configs are not overwritten automatically.
+**Extending a template and adding a tooltip style (resource pack):**
 
-## Requirements
-
-- Paper **26.1.2** (recommended). Other versions may work, but they are not tested.
-
-## Nexo
-
-Put this in your items folder, for example `items/flame_sword.yml`:
-
-```yaml
-flame_sword:
-  material: NETHERITE_SWORD
-  itemname: Flame Sword
-  Mechanics:
-    lte:
-      # Which template builds the lore
-      template: vanilla_extended
-      # One entry for each variable the template reads
-      variables:
-        rarity: legendary
-        item_level: '1'
-      # One entry for each group the template reads
-      groups:
-        tags:
-        - fire
-        - unique
-        description:
-        - <gold>A blade forged in the depths
-        - <gold>of the nether, still smoldering.
+```kdl
+template "vanilla_extended" extends="vanilla" tooltip-style="simple" {
+    group "description" each="<gray><line>" empty="skip"
+    var "rarity" display="<color><label>"
+}
 ```
 
-More info: [Nexo integration](https://github.com/AdamBurdik/lore-template-engine/wiki/Plugin-Integrations-Nexo)
+Transformers can also be bound to groups. Builtin groups use `key` to name the field being transformed, while PDC groups transform their stored values directly:
 
-## More Info
-
-See the [Modrinth page](https://modrinth.com/plugin/loretemplateengine/) or the [wiki](https://github.com/AdamBurdik/lore-template-engine/wiki).
-
-## API
-
-You can use the plugin from your own plugin with JitPack. Check the [JitPack page](https://jitpack.io/#AdamBurdik/lore-template-engine) for the dependency setup and the latest version.
-
-## Contributing and issues
-
-Found a bug or have an idea? Open an [issue](https://github.com/AdamBurdik/lore-template-engine/issues). Pull requests are welcome.
-
-## How to build
-
-You need Java 25 or newer.
-
-```shell
-./gradlew build
+```kdl
+group "styled_enchantments" {
+	builtin "enchantments"
+	transformer "ench_style" key="ench_id"
+	// exposes: <color>, <icon>, <ench_name>, <ench_level>, <ench_level_roman>
+}
 ```
 
-The jar will be in `build/libs/`.
+Values without an entry use the transformer's `fallback`. If there is no fallback, the variable or group entry is omitted.
 
-## License
+## Error messages
 
-[MIT](./LICENCE)
+Config is parsed with kidl, which turns config mistakes into compiler-style diagnostics instead of a generic "invalid config" at startup:
+
+- the exact file, line, and column
+- the offending source line
+- a caret underline on the exact node
+- a short label explaining what was expected
+- optional notes and a `help:` line for fixes
+
+For example, a misspelled source produces:
+
+```text
+error: unknown variable source `config`
+ --> plugins/LTE/variables.kdl:2:2
+  |
+2 |     source "config" key="rarity"
+  |     ^^^^^^^^^^^^^^^ use `pdc` or `computed`
+```
+
+Duplicate definitions, missing group sources, unknown sections, and invalid transformer keys are reported the same way, with ANSI colors in the server console. Invalid config fails before any lore is rendered, so you see the problem immediately.
+
+## Commands
+
+```
+/lte set template weapon_default
+/lte set variable rarity epic
+/lte group set description Hello World\nThis is second line
+```
+
+## Documentation
+
+Full config reference (variables, groups, transformers, templates, extending, tooltip styles) is on the [wiki](https://github.com/AdamBurdik/lore-template-engine/wiki).
+
+## For developers
+
+Other plugins can apply templates and read item data through the developer API. Setup and dependency instructions are on the [wiki](https://github.com/AdamBurdik/lore-template-engine/wiki/Developer%E2%80%90API%E2%80%90Dependency).
