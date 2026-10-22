@@ -1,3 +1,6 @@
+[![Modrinth](https://img.shields.io/modrinth/dt/loretemplateengine?logo=modrinth)](https://modrinth.com/plugin/loretemplateengine/)
+[![JitPack](https://jitpack.io/v/AdamBurdik/lore-template-engine.svg)](https://jitpack.io/#AdamBurdik/lore-template-engine)
+
 # Lore Template Engine
 
 A Paper plugin for defining custom item lore and tooltip layouts through config.
