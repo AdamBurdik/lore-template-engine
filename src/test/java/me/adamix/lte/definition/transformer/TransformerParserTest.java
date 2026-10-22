@@ -48,9 +48,9 @@ class TransformerParserTest {
         assertEquals(entry("pristine_ruby", "<aqua>", null, "Pristine Ruby"), gems.entries().get("pristine_ruby"));
 
         TransformerDefinition enchantments = byName.get("ench_style");
-        assertEquals(entry("mending", "<gold>", "\uE001", null), enchantments.entries().get("mending"));
-        assertEquals(entry("protection", "<aqua>", "\uE002", null), enchantments.entries().get("protection"));
-        assertEquals(entry("thorns", "<green>", "\uE003", null), enchantments.entries().get("thorns"));
+        assertEquals(entry("mending", "<gold>", "MEN", null), enchantments.entries().get("mending"));
+        assertEquals(entry("protection", "<aqua>", "PROT", null), enchantments.entries().get("protection"));
+        assertEquals(entry("thorns", "<green>", "THOR", null), enchantments.entries().get("thorns"));
         assertEquals(entry("fallback", "<gray>", "", null), enchantments.fallback());
     }
 
