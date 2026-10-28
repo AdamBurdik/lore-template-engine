@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "me.adamix.loretemplateengine"
-version = "0.7.1"
+version = "0.7.2"
 
 repositories {
     gradlePluginPortal()
