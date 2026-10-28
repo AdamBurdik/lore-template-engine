@@ -12,6 +12,7 @@ import me.adamix.lte.LTEPlugin;
 import me.adamix.lte.LifecycleService;
 import me.adamix.lte.TemplateService;
 import me.adamix.lte.VariableService;
+import me.adamix.lte.api.exception.ConfigurationException;
 import me.adamix.lte.api.exception.DefinitionNotFoundException;
 import me.adamix.lte.api.exception.NotPdcBackedException;
 import me.adamix.lte.definition.variable.VariableValue;
@@ -37,7 +38,13 @@ public class LTECommand extends BaseCommand {
     @Subcommand("reload")
     @CommandPermission("lte.command.reload")
     public void reload(@NotNull CommandSender sender) {
-        plugin.reload();
+        try {
+            plugin.reload();
+        } catch (ConfigurationException e) {
+            sender.sendMessage("Reload failed: configuration contains errors. Check the console for details.");
+            return;
+        }
+
         lifecycleService.rebuildAllPlayers();
         sender.sendMessage("Reloaded and rebuilt all templated items!");
     }

@@ -10,6 +10,7 @@ import me.adamix.kidl.validator.Context;
 import me.adamix.kidl.view.ChildKind;
 import me.adamix.kidl.view.Properties;
 import me.adamix.lte.LteErrors;
+import me.adamix.lte.api.exception.ConfigurationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -75,7 +76,7 @@ public class VariableParser {
         });
 
         if (result.hasErrors()) {
-            throw new IllegalStateException("Variable configuration contains errors");
+            throw new ConfigurationException("Variable configuration contains errors");
         }
 
         return List.copyOf(definitions);
@@ -91,6 +92,7 @@ public class VariableParser {
         String transformer = transformerChildren.isEmpty()
                 ? null
                 : transformerChildren.getFirst().arguments().getString(0);
+        FileSpan transformerSpan = transformer == null ? null : transformerChildren.getFirst().span();
 
         // Kidl still creates cursors for duplicated children. Consume their argument so its
         // `finish()` pass does not add a misleading "unexpected argument #0" warning.
@@ -104,7 +106,7 @@ public class VariableParser {
         VariableDefinition.Source source = parseSource(sourceCursor, ctx);
         if (source == null) return null;
 
-        return new VariableDefinition(variableName, source, transformer);
+        return new VariableDefinition(variableName, source, transformer, cursor.span(), transformerSpan);
     }
 
     private @Nullable VariableDefinition.Source parseSource(

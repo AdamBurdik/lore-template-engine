@@ -1,7 +1,11 @@
 package me.adamix.lte;
 
 import co.aikar.commands.PaperCommandManager;
+import me.adamix.kidl.config.DiagnosticsConfig;
+import me.adamix.kidl.diagnostic.Diagnostic;
+import me.adamix.kidl.render.AnsiRenderer;
 import me.adamix.lte.api.LoreTemplateAPI;
+import me.adamix.lte.api.exception.ConfigurationException;
 import me.adamix.lte.command.LTECommand;
 import me.adamix.lte.definition.group.GroupDefinition;
 import me.adamix.lte.definition.group.GroupParser;
@@ -25,6 +29,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -51,46 +58,67 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
     private PaperCommandManager commandManager;
 
     public void reload() {
-        variableRegistry.clear();
-        templateRegistry.clear();
-        groupRegistry.clear();
-        transformerRegistry.clear();
+        Path transformersFile = getDataPath().resolve("transformers.kdl");
+        Path variablesFile = getDataPath().resolve("variables.kdl");
+        Path groupsFile = getDataPath().resolve("groups.kdl");
+        Path templatesFile = getDataPath().resolve("templates.kdl");
 
-        var templateParser = new TemplateParser();
-        var variableParser = new VariableParser();
-        var groupParser = new GroupParser();
-        var transformerParser = new TransformerParser();
+        Registry<TransformerDefinition> transformers = new Registry<>();
+        Registry<VariableDefinition> variables = new Registry<>();
+        Registry<GroupDefinition> groups = new Registry<>();
+        Registry<LoreTemplateDefinition> templates = new Registry<>();
 
         try {
-            var transformerResult = transformerParser.parseFile(getDataPath().resolve("transformers.kdl"));
-            for (TransformerDefinition definition : transformerResult) {
-                transformerRegistry.register(definition.name(), definition);
+            for (TransformerDefinition definition : new TransformerParser().parseFile(transformersFile)) {
+                transformers.register(definition.name(), definition);
             }
 
-            var variableResult = variableParser.parseFile(getDataPath().resolve("variables.kdl"));
-            for (VariableDefinition definition : variableResult) {
-                variableRegistry.register(definition.name(), definition);
+            for (VariableDefinition definition : new VariableParser().parseFile(variablesFile)) {
+                variables.register(definition.name(), definition);
             }
 
-            var groupResult = groupParser.parseFile(getDataPath().resolve("groups.kdl"));
-            for (GroupDefinition definition : groupResult) {
-                groupRegistry.register(definition.name(), definition);
+            for (GroupDefinition definition : new GroupParser().parseFile(groupsFile)) {
+                groups.register(definition.name(), definition);
             }
 
-            var templateResult = templateParser.parseFile(getDataPath().resolve("templates.kdl"));
-            for (LoreTemplateDefinition loreTemplateDefinition : templateResult) {
-                templateRegistry.register(loreTemplateDefinition.id(), loreTemplateDefinition);
+            for (LoreTemplateDefinition definition : new TemplateParser().parseFile(templatesFile)) {
+                templates.register(definition.id(), definition);
             }
-
-            DefinitionValidator.validate(
-                    transformerRegistry,
-                    variableRegistry,
-                    groupRegistry,
-                    templateRegistry
-            );
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new ConfigurationException("Could not read LTE configuration files", e);
         }
+
+        List<Diagnostic> diagnostics = DefinitionValidator.validate(
+                transformers,
+                variables,
+                groups,
+                templates
+        );
+
+        if (!diagnostics.isEmpty()) {
+            renderDiagnostics(diagnostics, List.of(transformersFile, variablesFile, groupsFile, templatesFile));
+            throw new ConfigurationException("Definition validation failed");
+        }
+
+        transformerRegistry.replace(transformers);
+        variableRegistry.replace(variables);
+        groupRegistry.replace(groups);
+        templateRegistry.replace(templates);
+    }
+
+    private static void renderDiagnostics(
+            @NotNull List<Diagnostic> diagnostics,
+            @NotNull List<Path> files
+    ) {
+        var sources = new HashMap<String, List<String>>();
+        for (Path file : files) {
+            try {
+                sources.put(file.toString(), Files.readString(file).lines().toList());
+            } catch (IOException ignored) {
+            }
+        }
+
+        new AnsiRenderer(DiagnosticsConfig.builder().build()).sout(diagnostics, sources);
     }
 
     @Override
@@ -145,7 +173,14 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
 
         Bukkit.getPluginManager().registerEvents(new ItemListener(this, templateService), this);
         Bukkit.getPluginManager().registerEvents(new PlayerListener(lifecycleService), this);
-        reload();
+
+        try {
+            reload();
+        } catch (ConfigurationException e) {
+            getLogger().severe("LTE could not load its configuration; disabling. Fix the diagnostics above and restart the server.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
 
         attemptNexoIntegration();
     }

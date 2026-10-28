@@ -1,5 +1,6 @@
 package me.adamix.lte;
 
+import me.adamix.kidl.diagnostic.FileSpan;
 import me.adamix.lte.api.ResolvedGroup;
 import me.adamix.lte.definition.template.LoreTemplateDefinition;
 import me.adamix.lte.definition.template.TemplateElement;
@@ -37,7 +38,11 @@ public class LoreRenderer {
                     if (!shouldRender(collapseIfEmpty, itemStack)) break;
                     lore.add(Component.text(""));
                 }
-                case TemplateElement.Text(String value, Optional<String> collapseIfEmpty) -> {
+                case TemplateElement.Text(
+                        String value,
+                        Optional<String> collapseIfEmpty,
+                        FileSpan ignored
+                ) -> {
                     if (!shouldRender(collapseIfEmpty, itemStack)) break;
                     lore.add(LTEPlugin.MINI_MESSAGE.deserialize("<!italic><white>" + value));
                 }
@@ -45,7 +50,8 @@ public class LoreRenderer {
                         String name,
                         Optional<String> display,
                         Optional<String> prefix,
-                        Optional<String> suffix
+                        Optional<String> suffix,
+                        FileSpan ignored
                 ) -> {
                     var resolved = variableService.resolve(name, itemStack);
                     if (resolved.isEmpty()) break;
@@ -65,7 +71,8 @@ public class LoreRenderer {
                         @NotNull String each,
                         @NotNull TemplateElement.Group.Empty empty,
                         boolean inline,
-                        Optional<String> joiner
+                        Optional<String> joiner,
+                        FileSpan ignored
                 ) -> renderGroup(lore, name, each, empty, inline, joiner, itemStack);
 
                 case TemplateElement.Insert insert -> {

@@ -12,6 +12,7 @@ import me.adamix.kidl.validator.Context;
 import me.adamix.kidl.view.ChildKind;
 import me.adamix.kidl.view.TypedCursor;
 import me.adamix.lte.LteErrors;
+import me.adamix.lte.api.exception.ConfigurationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -140,7 +141,7 @@ public class TemplateParser {
         );
 
         if (result.hasErrors()) {
-            throw new IllegalStateException("Template configuration contains errors");
+            throw new ConfigurationException("Template configuration contains errors");
         }
 
         return resolved;
@@ -310,7 +311,8 @@ public class TemplateParser {
             ));
             case TEXT -> List.of(new TemplateElement.Text(
                     String.join("", cursor.arguments().nextStrings()),
-                    cursor.properties().optString("collapse-if-empty")
+                    cursor.properties().optString("collapse-if-empty"),
+                    cursor.span()
             ));
             case VAR, VARIABLE -> {
                 String name = cursor.arguments().getString(0);
@@ -320,7 +322,8 @@ public class TemplateParser {
                         name,
                         cursor.properties().optString("display"),
                         cursor.properties().optString("prefix"),
-                        cursor.properties().optString("suffix")
+                        cursor.properties().optString("suffix"),
+                        cursor.span()
                 ));
             }
             case GROUP -> {
@@ -351,7 +354,8 @@ public class TemplateParser {
                         each,
                         empty,
                         cursor.properties().getBoolean("inline", false),
-                        cursor.properties().optString("joiner")
+                        cursor.properties().optString("joiner"),
+                        cursor.span()
                 ));
             }
             case insert -> {

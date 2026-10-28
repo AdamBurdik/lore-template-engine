@@ -9,6 +9,7 @@ import me.adamix.kidl.error.DiagnosticError;
 import me.adamix.kidl.validator.Context;
 import me.adamix.kidl.view.ChildKind;
 import me.adamix.lte.LteErrors;
+import me.adamix.lte.api.exception.ConfigurationException;
 import org.bukkit.inventory.EquipmentSlotGroup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -81,7 +82,7 @@ public class GroupParser {
         });
 
         if (result.hasErrors()) {
-            throw new IllegalStateException("Group configuration contains errors");
+            throw new ConfigurationException("Group configuration contains errors");
         }
 
         return List.copyOf(definitions);
@@ -106,7 +107,7 @@ public class GroupParser {
             String transformerName = transformerCursor.arguments().getString(0);
             if (transformerName != null) {
                 String key = transformerCursor.properties().optString("key").orElse(null);
-                transformer = new TransformerBinding(transformerName, key);
+                transformer = new TransformerBinding(transformerName, key, transformerCursor.span());
             }
         }
 

@@ -1,12 +1,15 @@
 package me.adamix.lte.definition.variable;
 
+import me.adamix.kidl.diagnostic.FileSpan;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public record VariableDefinition(
         @NotNull String name,
         @NotNull Source source,
-        @Nullable String transformer
+        @Nullable String transformer,
+        @NotNull FileSpan span,
+        @Nullable FileSpan transformerSpan
 ) {
     public sealed interface Source {
         record Pdc(

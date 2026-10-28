@@ -18,6 +18,11 @@ public class Registry<T> {
         map.put(id, template);
     }
 
+    public void replace(@NotNull Registry<T> other) {
+        map.clear();
+        map.putAll(other.map);
+    }
+
     public void clear() {
         map.clear();
     }

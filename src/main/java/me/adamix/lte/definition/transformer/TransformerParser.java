@@ -10,6 +10,7 @@ import me.adamix.kidl.validator.Context;
 import me.adamix.kidl.view.ChildKind;
 import me.adamix.kidl.view.TypedCursor;
 import me.adamix.lte.LteErrors;
+import me.adamix.lte.api.exception.ConfigurationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -78,7 +79,7 @@ public class TransformerParser {
         });
 
         if (result.hasErrors()) {
-            throw new IllegalStateException("Transformer configuration contains errors");
+            throw new ConfigurationException("Transformer configuration contains errors");
         }
 
         return List.copyOf(definitions);
