@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
 public record TransformerDefinition(
         @NotNull String name,
@@ -17,16 +18,10 @@ public record TransformerDefinition(
 
     public record Entry(
             @NotNull String id,
-            @Nullable String color,
-            @Nullable String icon,
-            @Nullable String label
+            @NotNull Map<String, String> fields
     ) {
-        public @NotNull Map<String, String> fields() {
-            Map<String, String> fields = new LinkedHashMap<>();
-            fields.put("color", color == null ? "" : color);
-            fields.put("icon", icon == null ? "" : icon);
-            fields.put("label", label == null ? "" : label);
-            return Map.copyOf(fields);
+        public @NotNull Optional<String> field(@NotNull String key) {
+            return fields.get(key).describeConstable();
         }
     }
 }

@@ -50,30 +50,6 @@ public class TransformerParser {
         }
     }
 
-    enum EntryChild implements ChildKind {
-        COLOR("color", Cardinality.OPTIONAL),
-        ICON("icon", Cardinality.OPTIONAL),
-        LABEL("label", Cardinality.OPTIONAL);
-
-        private final String id;
-        private final Cardinality cardinality;
-
-        EntryChild(String id, Cardinality cardinality) {
-            this.id = id;
-            this.cardinality = cardinality;
-        }
-
-        @Override
-        public String id() {
-            return id;
-        }
-
-        @Override
-        public Cardinality cardinality() {
-            return cardinality;
-        }
-    }
-
     public @NotNull List<TransformerDefinition> parseFile(@NotNull Path path) throws IOException {
         List<TransformerDefinition> definitions = new ArrayList<>();
         Map<String, FileSpan> spans = new HashMap<>();
@@ -85,7 +61,6 @@ public class TransformerParser {
             if (transformerName == null) return;
 
             TransformerDefinition definition = parseTransformer(cursor, transformerName, ctx);
-            if (definition == null) return;
 
             FileSpan previous = spans.putIfAbsent(definition.name(), cursor.span());
             if (previous != null) {
@@ -109,7 +84,7 @@ public class TransformerParser {
         return List.copyOf(definitions);
     }
 
-    private @Nullable TransformerDefinition parseTransformer(
+    private @NotNull TransformerDefinition parseTransformer(
             @NotNull Cursor cursor,
             @NotNull String transformerName,
             @NotNull Context ctx
@@ -165,20 +140,14 @@ public class TransformerParser {
             @NotNull Cursor cursor,
             @NotNull String entryId
     ) {
-        String color = null;
-        String icon = null;
-        String label = null;
-
-        for (TypedCursor<EntryChild> child : cursor.children(EntryChild.class)) {
-            String value = child.arguments().getString(0);
-            switch (child.kind()) {
-                case COLOR -> color = value;
-                case ICON -> icon = value;
-                case LABEL -> label = value;
-            }
-        }
-
-        return new TransformerDefinition.Entry(entryId, color, icon, label);
+        Map<String, String> fields = new HashMap<>();
+        
+        cursor.dynamicChildren().forEach((key, fieldCursor) -> {
+            String value = String.join("", fieldCursor.arguments().nextStrings());
+            fields.put(key, value);
+        });
+        
+        return new TransformerDefinition.Entry(entryId, fields);
     }
 
     private static void report(

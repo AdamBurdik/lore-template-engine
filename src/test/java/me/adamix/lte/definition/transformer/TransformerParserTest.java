@@ -6,13 +6,14 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 class TransformerParserTest {
 
@@ -103,11 +104,41 @@ class TransformerParserTest {
     }
 
     @Test
-    void entryFieldsDefaultToEmpty() {
-        TransformerDefinition.Entry entry = new TransformerDefinition.Entry("a", null, null, null);
+    void parsesCustomEntryFieldNames() throws IOException {
+        Path file = ParserTestSupport.write(tempDir, "custom-fields.kdl", """
+                transformer "custom" {
+                    entry "a" {
+                        display "Custom"
+                        weight "heavy"
+                    }
+                    fallback {
+                        display "Unknown"
+                    }
+                }
+                """);
 
-        assertEquals(Map.of("color", "", "icon", "", "label", ""), entry.fields());
-        assertNull(entry.color());
+        TransformerDefinition definition = new TransformerParser().parseFile(file).getFirst();
+
+        assertEquals(
+                Map.of("display", "Custom", "weight", "heavy"),
+                definition.entries().get("a").fields()
+        );
+        assertEquals(
+                Optional.of("Custom"),
+                definition.entries().get("a").field("display")
+        );
+        assertEquals(Map.of("display", "Unknown"), definition.fallback().fields());
+    }
+
+    @Test
+    void entryFieldsOnlyContainDefinedValues() {
+        TransformerDefinition.Entry entry = new TransformerDefinition.Entry(
+                "a",
+                Map.of("color", "<gray>")
+        );
+
+        assertEquals(Map.of("color", "<gray>"), entry.fields());
+        assertEquals(Optional.of("<gray>"), entry.field("color"));
     }
 
     private static TransformerDefinition.Entry entry(
@@ -116,6 +147,10 @@ class TransformerParserTest {
             String icon,
             String label
     ) {
-        return new TransformerDefinition.Entry(id, color, icon, label);
+        Map<String, String> fields = new HashMap<>();
+        if (color != null) fields.put("color", color);
+        if (icon != null) fields.put("icon", icon);
+        if (label != null) fields.put("label", label);
+        return new TransformerDefinition.Entry(id, fields);
     }
 }
