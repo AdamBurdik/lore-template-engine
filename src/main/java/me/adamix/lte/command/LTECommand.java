@@ -19,7 +19,6 @@ import me.adamix.lte.definition.variable.VariableValue;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -37,7 +36,7 @@ public class LTECommand extends BaseCommand {
 
     @Subcommand("reload")
     @CommandPermission("lte.command.reload")
-    public void reload(@NotNull CommandSender sender) {
+    public void reload(CommandSender sender) {
         try {
             plugin.reload();
         } catch (ConfigurationException e) {
@@ -51,7 +50,7 @@ public class LTECommand extends BaseCommand {
 
     @Subcommand("rebuild")
     @CommandPermission("lte.command.rebuild")
-    public void rebuild(@NotNull CommandSender sender, @Optional @Nullable Player target) {
+    public void rebuild(CommandSender sender, @Optional @Nullable Player target) {
         Player player = target != null ? target : (sender instanceof Player s ? s : null);
         if (player == null) {
             sender.sendMessage("This command must be run by a player, or specify a target player.");
@@ -65,7 +64,7 @@ public class LTECommand extends BaseCommand {
     @Subcommand("set template")
     @CommandCompletion("@templates")
     @CommandPermission("lte.command.set.template")
-    public void apply(@NotNull Player player, @NotNull String templateId) {
+    public void apply(Player player, String templateId) {
         ItemStack itemStack = player.getInventory().getItemInMainHand();
         templateService.apply(templateId, itemStack);
     }
@@ -73,7 +72,7 @@ public class LTECommand extends BaseCommand {
     @Subcommand("set variable")
     @CommandCompletion("@variables @variableValues")
     @CommandPermission("lte.command.set.variable")
-    public void setVariable(@NotNull Player player, @NotNull String name, @NotNull String value) {
+    public void setVariable(Player player, String name, String value) {
         ItemStack itemStack = player.getInventory().getItemInMainHand();
 
         try {
@@ -90,7 +89,7 @@ public class LTECommand extends BaseCommand {
     @Subcommand("group set")
     @CommandCompletion("@groups @groupValues")
     @CommandPermission("lte.command.group.set")
-    public void setGroup(@NotNull Player player, @NotNull String name, @NotNull String... args) {
+    public void setGroup(Player player, String name, String... args) {
         List<String> values = splitLines(String.join(" ", args));
         ItemStack itemStack = player.getInventory().getItemInMainHand();
 
@@ -103,7 +102,7 @@ public class LTECommand extends BaseCommand {
     @Subcommand("group add")
     @CommandCompletion("@groups @groupValues")
     @CommandPermission("lte.command.group.add")
-    public void addGroupValue(@NotNull Player player, @NotNull String name, @NotNull String... args) {
+    public void addGroupValue(Player player, String name, String... args) {
         List<String> rawInput = splitLines(String.join(" ", args));
 
         List<String> toAdd = rawInput.stream()
@@ -125,7 +124,7 @@ public class LTECommand extends BaseCommand {
     @Subcommand("group setslot")
     @CommandCompletion("@groups 1|2|3|4 @groupValues")
     @CommandPermission("lte.command.group.setslot")
-    public void setGroupSlot(@NotNull Player player, @NotNull String name, int index, @NotNull String value) {
+    public void setGroupSlot(Player player, String name, int index, String value) {
         ItemStack itemStack = player.getInventory().getItemInMainHand();
 
         if (executeGroupAction(player, () -> {
@@ -155,7 +154,7 @@ public class LTECommand extends BaseCommand {
     @Subcommand("group removeat")
     @CommandCompletion("@groups 1|2|3|4")
     @CommandPermission("lte.command.group.removeat")
-    public void removeGroupSlot(@NotNull Player player, @NotNull String name, int index) {
+    public void removeGroupSlot(Player player, String name, int index) {
         ItemStack itemStack = player.getInventory().getItemInMainHand();
 
         if (executeGroupAction(player, () -> {
@@ -178,7 +177,7 @@ public class LTECommand extends BaseCommand {
     @Subcommand("group remove")
     @CommandCompletion("@groups @groupValues")
     @CommandPermission("lte.command.group.remove")
-    public void removeGroupValue(@NotNull Player player, @NotNull String name, @NotNull String value) {
+    public void removeGroupValue(Player player, String name, String value) {
         ItemStack itemStack = player.getInventory().getItemInMainHand();
 
         if (executeGroupAction(player, () -> {
@@ -197,7 +196,7 @@ public class LTECommand extends BaseCommand {
     @Subcommand("group clear")
     @CommandCompletion("@groups")
     @CommandPermission("lte.command.group.clear")
-    public void clearGroup(@NotNull Player player, @NotNull String name) {
+    public void clearGroup(Player player, String name) {
         ItemStack itemStack = player.getInventory().getItemInMainHand();
 
         if (executeGroupAction(player, () -> groupService.set(itemStack, name, List.of()))) {
@@ -211,7 +210,7 @@ public class LTECommand extends BaseCommand {
         void execute() throws DefinitionNotFoundException, NotPdcBackedException, IllegalArgumentException;
     }
 
-    private boolean executeGroupAction(@NotNull Player player, @NotNull GroupAction action) {
+    private boolean executeGroupAction(Player player, GroupAction action) {
         try {
             action.execute();
             return true;
@@ -221,14 +220,12 @@ public class LTECommand extends BaseCommand {
         }
     }
 
-    private static @NotNull List<String> splitLines(@NotNull String raw) {
+    private static List<String> splitLines(String raw) {
         List<String> lines = new ArrayList<>();
         for (String segment : raw.split("\\\\n", -1)) {
-            for (String line : segment.split("\\R")) {
-                if (!line.isBlank()) {
-                    lines.add(line);
-                }
-            }
+            segment.lines()
+                    .filter(line -> !line.isBlank())
+                    .forEach(lines::add);
         }
         return lines;
     }

@@ -21,7 +21,6 @@ import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.text.DecimalFormat;
@@ -52,7 +51,7 @@ public class GroupService {
         this.listType = PersistentDataType.LIST.listTypeFrom(new NullableStringType(plugin));
     }
 
-    public @NotNull List<@Nullable String> get(@NotNull String name, @NotNull ItemStack itemStack) {
+    public List<@Nullable String> get(String name, ItemStack itemStack) {
         var definition = groupRegistry.get(name)
                 .orElseThrow(() -> new NoSuchElementException("No group definition registered with name " + name));
 
@@ -63,7 +62,7 @@ public class GroupService {
         };
     }
 
-    public @NotNull ResolvedGroup resolve(@NotNull String name, @NotNull ItemStack itemStack) {
+    public ResolvedGroup resolve(String name, ItemStack itemStack) {
         var definition = groupRegistry.get(name)
                 .orElseThrow(() -> new NoSuchElementException("No group definition registered with name " + name));
 
@@ -74,13 +73,13 @@ public class GroupService {
         };
     }
 
-    private @NotNull NamespacedKey keyFor(GroupDefinition.Source.PDC pdc) {
+    private NamespacedKey keyFor(GroupDefinition.Source.PDC pdc) {
         return new NamespacedKey(plugin, "group_" + pdc.key());
     }
 
-    private @NotNull List<@Nullable String> readValues(
-            @NotNull GroupDefinition.Source.PDC pdc,
-            @NotNull ItemStack itemStack
+    private List<@Nullable String> readValues(
+            GroupDefinition.Source.PDC pdc,
+            ItemStack itemStack
     ) {
         var container = itemStack.getPersistentDataContainer();
         List<NullableString> stored = container.get(keyFor(pdc), listType);
@@ -93,10 +92,10 @@ public class GroupService {
         return values;
     }
 
-    private @NotNull ResolvedGroup resolvePdc(
-            @NotNull GroupDefinition.Source.PDC pdc,
+    private ResolvedGroup resolvePdc(
+            GroupDefinition.Source.PDC pdc,
             @Nullable TransformerBinding transformer,
-            @NotNull ItemStack itemStack
+            ItemStack itemStack
     ) {
         List<@Nullable String> values = readValues(pdc, itemStack);
         if (values.isEmpty()) return ResolvedGroup.empty();
@@ -124,10 +123,10 @@ public class GroupService {
         return new ResolvedGroup(entries);
     }
 
-    private @NotNull ResolvedGroup resolveBuiltin(
-            @NotNull String builtin,
+    private ResolvedGroup resolveBuiltin(
+            String builtin,
             @Nullable String slot,
-            @NotNull ItemStack itemStack,
+            ItemStack itemStack,
             @Nullable TransformerBinding transformer
     ) {
         return switch (builtin) {
@@ -137,8 +136,8 @@ public class GroupService {
         };
     }
 
-    private @NotNull ResolvedGroup resolveEnchantments(
-            @NotNull ItemStack itemStack,
+    private ResolvedGroup resolveEnchantments(
+            ItemStack itemStack,
             @Nullable TransformerBinding transformer
     ) {
         List<ResolvedGroup.Entry> entries = new ArrayList<>();
@@ -167,8 +166,8 @@ public class GroupService {
         return new ResolvedGroup(entries);
     }
 
-    private @NotNull ResolvedGroup resolveAttributes(
-            @NotNull ItemStack itemStack,
+    private ResolvedGroup resolveAttributes(
+            ItemStack itemStack,
             @Nullable String slot,
             @Nullable TransformerBinding transformer
     ) {
@@ -220,7 +219,7 @@ public class GroupService {
     }
 
     private void applyTransformer(
-            @NotNull Map<String, String> fields,
+            Map<String, String> fields,
             @Nullable TransformerBinding transformer
     ) {
         if (transformer == null) return;
@@ -232,7 +231,7 @@ public class GroupService {
         resolved.ifPresent(entry -> fields.putAll(entry.fields()));
     }
 
-    public void set(@NotNull ItemStack itemStack, @NotNull String name, @NotNull List<@Nullable String> values) {
+    public void set(ItemStack itemStack, String name, List<@Nullable String> values) {
         var definition = groupRegistry.get(name)
                 .orElseThrow(() -> new DefinitionNotFoundException("Unknown group: " + name));
 
@@ -247,12 +246,12 @@ public class GroupService {
                 meta.getPersistentDataContainer().set(keyFor(pdc), listType, wrapped));
     }
 
-    private static @NotNull String formatValue(double value) {
+    private static String formatValue(double value) {
         DecimalFormat df = new DecimalFormat("0.##", DecimalFormatSymbols.getInstance(Locale.ROOT));
         return df.format(value);
     }
 
-    private static @NotNull String toRoman(int level) {
+    private static String toRoman(int level) {
         String[] numerals = {"", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"};
         if (level < 0 || level >= numerals.length) return String.valueOf(level);
         return numerals[level];

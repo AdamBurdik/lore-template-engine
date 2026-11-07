@@ -10,7 +10,6 @@ import me.adamix.lte.definition.template.TemplateElement;
 import me.adamix.lte.definition.transformer.TransformerDefinition;
 import me.adamix.lte.definition.variable.VariableDefinition;
 import me.adamix.lte.registry.Registry;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -32,11 +31,11 @@ public final class DefinitionValidator {
     private DefinitionValidator() {
     }
 
-    public static @NotNull List<Diagnostic> validate(
-            @NotNull Registry<TransformerDefinition> transformers,
-            @NotNull Registry<VariableDefinition> variables,
-            @NotNull Registry<GroupDefinition> groups,
-            @NotNull Registry<LoreTemplateDefinition> templates
+    public static List<Diagnostic> validate(
+            Registry<TransformerDefinition> transformers,
+            Registry<VariableDefinition> variables,
+            Registry<GroupDefinition> groups,
+            Registry<LoreTemplateDefinition> templates
     ) {
         List<Diagnostic> diagnostics = new ArrayList<>();
         Context context = new Context(diagnostics);
@@ -136,8 +135,8 @@ public final class DefinitionValidator {
         return List.copyOf(diagnostics);
     }
 
-    private static @NotNull Set<String> transformerFields(
-            @NotNull Registry<TransformerDefinition> transformers
+    private static Set<String> transformerFields(
+            Registry<TransformerDefinition> transformers
     ) {
         Set<String> fields = new LinkedHashSet<>();
         for (String name : transformers.keySet()) {
@@ -152,9 +151,9 @@ public final class DefinitionValidator {
         return fields;
     }
 
-    private static @NotNull Set<String> transformerFields(
-            @NotNull Registry<TransformerDefinition> transformers,
-            @NotNull String name
+    private static Set<String> transformerFields(
+            Registry<TransformerDefinition> transformers,
+            String name
     ) {
         TransformerDefinition definition = transformers.get(name).orElse(null);
         if (definition == null) return Set.of();
@@ -170,13 +169,13 @@ public final class DefinitionValidator {
     }
 
     private static void validateElement(
-            @NotNull String templateId,
-            @NotNull TemplateElement element,
-            @NotNull Registry<TransformerDefinition> transformers,
-            @NotNull Registry<VariableDefinition> variables,
-            @NotNull Registry<GroupDefinition> groups,
-            @NotNull Set<String> transformerFields,
-            @NotNull Context context
+            String templateId,
+            TemplateElement element,
+            Registry<TransformerDefinition> transformers,
+            Registry<VariableDefinition> variables,
+            Registry<GroupDefinition> groups,
+            Set<String> transformerFields,
+            Context context
     ) {
         switch (element) {
             case TemplateElement.Variable variable -> {
@@ -269,15 +268,15 @@ public final class DefinitionValidator {
     }
 
     private static void checkTransformerFields(
-            @NotNull Context context,
-            @NotNull String templateId,
-            @NotNull String description,
-            @NotNull String template,
-            @NotNull FileSpan span,
+            Context context,
+            String templateId,
+            String description,
+            String template,
+            FileSpan span,
             @Nullable String transformerName,
-            @NotNull Registry<TransformerDefinition> transformers,
-            @NotNull Set<String> knownTransformerFields,
-            @NotNull Set<String> builtinFields
+            Registry<TransformerDefinition> transformers,
+            Set<String> knownTransformerFields,
+            Set<String> builtinFields
     ) {
         Set<String> referenced = TemplateFields.referencedFields(template);
         referenced.removeAll(builtinFields);
@@ -318,22 +317,22 @@ public final class DefinitionValidator {
     }
 
     private static void report(
-            @NotNull Context context,
-            @NotNull DiagnosticError error,
-            @NotNull String message,
-            @NotNull FileSpan span,
-            @NotNull String label,
-            @NotNull String help
+            Context context,
+            DiagnosticError error,
+            String message,
+            FileSpan span,
+            String label,
+            String help
     ) {
         context.addDiagnostic(Diagnostic.of(error, message, span, label, help));
     }
 
     private static void report(
-            @NotNull Context context,
-            @NotNull DiagnosticError error,
-            @NotNull String message,
-            @NotNull FileSpan span,
-            @NotNull String label
+            Context context,
+            DiagnosticError error,
+            String message,
+            FileSpan span,
+            String label
     ) {
         context.addDiagnostic(Diagnostic.of(error, message, span, label));
     }

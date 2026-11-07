@@ -1,7 +1,5 @@
 package me.adamix.lte;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -14,9 +12,9 @@ public final class TemplateFields {
     private TemplateFields() {
     }
 
-    public static @NotNull String expand(
-            @NotNull String template,
-            @NotNull Map<String, String> fields
+    public static String expand(
+            String template,
+            Map<String, String> fields
     ) {
         Matcher matcher = FIELD.matcher(template);
         StringBuilder result = new StringBuilder();
@@ -33,7 +31,7 @@ public final class TemplateFields {
         return result.toString();
     }
 
-    public static @NotNull Set<String> referencedFields(@NotNull String template) {
+    public static Set<String> referencedFields(String template) {
         Matcher matcher = FIELD.matcher(template);
         Set<String> fields = new LinkedHashSet<>();
 

@@ -8,6 +8,7 @@ import com.nexomc.nexo.items.UpdateCallback;
 import com.nexomc.nexo.mechanics.MechanicsManager;
 import lombok.RequiredArgsConstructor;
 import me.adamix.lte.LTEPlugin;
+import me.adamix.lte.annotation.Initializer;
 import me.adamix.lte.api.LoreTemplateAPI;
 import net.kyori.adventure.key.Key;
 import org.bukkit.Bukkit;
@@ -16,7 +17,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.NotNull;
 
 @RequiredArgsConstructor
 public class NexoIntegration implements Listener {
@@ -24,6 +24,7 @@ public class NexoIntegration implements Listener {
     private final LoreTemplateAPI api;
     private LTEMechanicFactory factory;
 
+    @Initializer
     public void enable() {
         ConfigurationSection blank = new YamlConfiguration();
         factory = new LTEMechanicFactory(blank);
@@ -33,7 +34,7 @@ public class NexoIntegration implements Listener {
     }
 
     @EventHandler
-    public void onMechanicsRegistered(@NotNull NexoMechanicsRegisteredEvent event) {
+    public void onMechanicsRegistered(NexoMechanicsRegisteredEvent event) {
         factory.clear();
     }
 
@@ -64,7 +65,7 @@ public class NexoIntegration implements Listener {
                 }
 
                 @Override
-                public @NotNull ItemStack postUpdate(String itemId, ItemStack itemStack, ItemStack pre) {
+                public ItemStack postUpdate(String itemId, ItemStack itemStack, ItemStack pre) {
                     LTEMechanic m = factory.getMechanic(itemId);
                     if (m != null) m.applyTo(api, itemStack);
                     return itemStack;

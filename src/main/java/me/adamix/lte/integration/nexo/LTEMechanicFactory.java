@@ -5,7 +5,6 @@ import com.nexomc.nexo.mechanics.Mechanic;
 import com.nexomc.nexo.mechanics.MechanicFactory;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -16,7 +15,7 @@ public final class LTEMechanicFactory extends MechanicFactory {
     private final Map<String, LTEMechanic> byItem = new HashMap<>();
 
     public LTEMechanicFactory(
-            @NotNull ConfigurationSection section
+            ConfigurationSection section
     ) {
         super("lte");
     }
@@ -32,13 +31,13 @@ public final class LTEMechanicFactory extends MechanicFactory {
     }
 
     @Override
-    public LTEMechanic getMechanic(@Nullable String itemID) {
+    public @Nullable LTEMechanic getMechanic(@Nullable String itemID) {
         if (itemID == null) return null;
         return byItem.get(itemID);
     }
 
     @Override
-    public LTEMechanic getMechanic(@Nullable ItemStack item) {
+    public @Nullable LTEMechanic getMechanic(@Nullable ItemStack item) {
         String id = NexoItems.idFromItem(item);
         return id == null ? null : byItem.get(id);
     }

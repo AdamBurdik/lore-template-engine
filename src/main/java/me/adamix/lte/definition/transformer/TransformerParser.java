@@ -11,7 +11,6 @@ import me.adamix.kidl.view.ChildKind;
 import me.adamix.kidl.view.TypedCursor;
 import me.adamix.lte.LteErrors;
 import me.adamix.lte.api.exception.ConfigurationException;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -51,7 +50,7 @@ public class TransformerParser {
         }
     }
 
-    public @NotNull List<TransformerDefinition> parseFile(@NotNull Path path) throws IOException {
+    public List<TransformerDefinition> parseFile(Path path) throws IOException {
         List<TransformerDefinition> definitions = new ArrayList<>();
         Map<String, FileSpan> spans = new HashMap<>();
 
@@ -85,10 +84,10 @@ public class TransformerParser {
         return List.copyOf(definitions);
     }
 
-    private @NotNull TransformerDefinition parseTransformer(
-            @NotNull Cursor cursor,
-            @NotNull String transformerName,
-            @NotNull Context ctx
+    private TransformerDefinition parseTransformer(
+            Cursor cursor,
+            String transformerName,
+            Context ctx
     ) {
         Map<String, TransformerDefinition.Entry> entries = new LinkedHashMap<>();
         TransformerDefinition.Entry fallback = null;
@@ -130,16 +129,16 @@ public class TransformerParser {
         return new TransformerDefinition(transformerName, entries, fallback);
     }
 
-    private @Nullable TransformerDefinition.Entry parseEntry(@NotNull Cursor cursor) {
+    private @Nullable TransformerDefinition.Entry parseEntry(Cursor cursor) {
         String entryId = cursor.arguments().getString(0);
         if (entryId == null) return null;
 
         return parseFields(cursor, entryId);
     }
 
-    private @NotNull TransformerDefinition.Entry parseFields(
-            @NotNull Cursor cursor,
-            @NotNull String entryId
+    private TransformerDefinition.Entry parseFields(
+            Cursor cursor,
+            String entryId
     ) {
         Map<String, String> fields = new HashMap<>();
         
@@ -152,11 +151,11 @@ public class TransformerParser {
     }
 
     private static void report(
-            @NotNull Context ctx,
-            @NotNull DiagnosticError error,
-            @NotNull String message,
-            @NotNull FileSpan span,
-            @NotNull String label
+            Context ctx,
+            DiagnosticError error,
+            String message,
+            FileSpan span,
+            String label
     ) {
         ctx.addDiagnostic(Diagnostic.of(error, message, span, label));
     }

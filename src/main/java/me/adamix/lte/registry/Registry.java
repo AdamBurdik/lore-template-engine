@@ -1,7 +1,5 @@
 package me.adamix.lte.registry;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -10,15 +8,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Registry<T> {
     private final Map<String, T> map = new ConcurrentHashMap<>();
 
-    public @NotNull Optional<T> get(@NotNull String id) {
+    public Optional<T> get(String id) {
         return Optional.ofNullable(map.get(id));
     }
 
-    public void register(@NotNull String id, @NotNull T template) {
+    public void register(String id, T template) {
         map.put(id, template);
     }
 
-    public void replace(@NotNull Registry<T> other) {
+    public void replace(Registry<T> other) {
         map.clear();
         map.putAll(other.map);
     }
@@ -27,7 +25,7 @@ public class Registry<T> {
         map.clear();
     }
 
-    public @NotNull Set<String> keySet() {
+    public Set<String> keySet() {
         return map.keySet();
     }
 }

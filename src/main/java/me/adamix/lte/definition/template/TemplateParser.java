@@ -13,7 +13,6 @@ import me.adamix.kidl.view.ChildKind;
 import me.adamix.kidl.view.TypedCursor;
 import me.adamix.lte.LteErrors;
 import me.adamix.lte.api.exception.ConfigurationException;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -23,7 +22,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -74,8 +72,8 @@ public class TemplateParser {
         }
     }
 
-    public @NotNull List<LoreTemplateDefinition> parseFile(@NotNull Path path) throws IOException {
-        List<LoreTemplateDefinition> all = new LinkedList<>();
+    public List<LoreTemplateDefinition> parseFile(Path path) throws IOException {
+        List<LoreTemplateDefinition> all = new ArrayList<>();
         Map<String, FileSpan> spans = new HashMap<>();
         AtomicReference<Context> contextRef = new AtomicReference<>();
 
@@ -89,7 +87,7 @@ public class TemplateParser {
             Optional<String> extendsId = cursor.properties().optString("extends");
             Optional<String> tooltipStyle = cursor.properties().optString("tooltip-style");
 
-            List<TemplateElement> templateElements = new LinkedList<>();
+            List<TemplateElement> templateElements = new ArrayList<>();
             Map<String, List<TemplateElement>> sections = new LinkedHashMap<>();
 
             for (TypedCursor<TemplateChild> child : cursor.children(TemplateChild.class)) {
@@ -147,10 +145,10 @@ public class TemplateParser {
         return resolved;
     }
 
-    private @NotNull List<LoreTemplateDefinition> resolveExtensions(
-            @NotNull List<LoreTemplateDefinition> templates,
-            @NotNull Context ctx,
-            @NotNull Map<String, FileSpan> spans
+    private List<LoreTemplateDefinition> resolveExtensions(
+            List<LoreTemplateDefinition> templates,
+            Context ctx,
+            Map<String, FileSpan> spans
     ) {
         Map<String, LoreTemplateDefinition> byId = new HashMap<>();
         for (LoreTemplateDefinition template : templates) {
@@ -181,19 +179,19 @@ public class TemplateParser {
         return result;
     }
 
-    private static boolean containsInsert(@NotNull List<TemplateElement> elements) {
+    private static boolean containsInsert(List<TemplateElement> elements) {
         return elements.stream().anyMatch(e -> e instanceof TemplateElement.Insert);
     }
 
     private @Nullable Resolved resolve(
-            @NotNull String id,
-            @NotNull Map<String, LoreTemplateDefinition> byId,
-            @NotNull Map<String, Resolved> resolved,
-            @NotNull Set<String> visiting,
-            @NotNull Set<String> failed,
-            @NotNull Context ctx,
-            @NotNull Map<String, FileSpan> spans,
-            @NotNull FileSpan origin
+            String id,
+            Map<String, LoreTemplateDefinition> byId,
+            Map<String, Resolved> resolved,
+            Set<String> visiting,
+            Set<String> failed,
+            Context ctx,
+            Map<String, FileSpan> spans,
+            FileSpan origin
     ) {
         Resolved cached = resolved.get(id);
         if (cached != null) {
@@ -290,20 +288,20 @@ public class TemplateParser {
     }
 
     private static void report(
-            @NotNull Context ctx,
-            @NotNull DiagnosticError error,
-            @NotNull String message,
-            @NotNull FileSpan span,
-            @NotNull String label
+            Context ctx,
+            DiagnosticError error,
+            String message,
+            FileSpan span,
+            String label
     ) {
         ctx.addDiagnostic(Diagnostic.of(error, message, span, label));
     }
 
 
-    private @NotNull List<TemplateElement> parse(
-            @NotNull TypedCursor<TemplateChild> cursor,
-            @NotNull Map<String, List<TemplateElement>> sections,
-            @NotNull Context ctx
+    private List<TemplateElement> parse(
+            TypedCursor<TemplateChild> cursor,
+            Map<String, List<TemplateElement>> sections,
+            Context ctx
     ) {
         return switch (cursor.kind()) {
             case BLANK -> List.of(new TemplateElement.Blank(
@@ -390,9 +388,9 @@ public class TemplateParser {
     }
 
     private record Resolved(
-            @NotNull List<TemplateElement> elements,
-            @NotNull Optional<String> tooltipStyle,
-            @NotNull Map<String, List<TemplateElement>> sections
+            List<TemplateElement> elements,
+            Optional<String> tooltipStyle,
+            Map<String, List<TemplateElement>> sections
     ) {
     }
 }

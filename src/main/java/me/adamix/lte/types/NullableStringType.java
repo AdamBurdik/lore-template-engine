@@ -5,31 +5,30 @@ import org.bukkit.persistence.PersistentDataAdapterContext;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
-import org.jetbrains.annotations.NotNull;
 
 public final class NullableStringType implements PersistentDataType<PersistentDataContainer, NullableString> {
     private final NamespacedKey presentKey;
     private final NamespacedKey valueKey;
 
-    public NullableStringType(@NotNull Plugin plugin) {
+    public NullableStringType(Plugin plugin) {
         this.presentKey = new NamespacedKey(plugin, "present");
         this.valueKey = new NamespacedKey(plugin, "value");
     }
 
     @Override
-    public @NotNull Class<PersistentDataContainer> getPrimitiveType() {
+    public Class<PersistentDataContainer> getPrimitiveType() {
         return PersistentDataContainer.class;
     }
 
     @Override
-    public @NotNull Class<NullableString> getComplexType() {
+    public Class<NullableString> getComplexType() {
         return NullableString.class;
     }
 
     @Override
-    public @NotNull PersistentDataContainer toPrimitive(
-            @NotNull NullableString complex,
-            @NotNull PersistentDataAdapterContext context
+    public PersistentDataContainer toPrimitive(
+            NullableString complex,
+            PersistentDataAdapterContext context
     ) {
         PersistentDataContainer container = context.newPersistentDataContainer();
         boolean present = complex.value() != null;
@@ -41,9 +40,9 @@ public final class NullableStringType implements PersistentDataType<PersistentDa
     }
 
     @Override
-    public @NotNull NullableString fromPrimitive(
-            @NotNull PersistentDataContainer primitive,
-            @NotNull PersistentDataAdapterContext context
+    public NullableString fromPrimitive(
+            PersistentDataContainer primitive,
+            PersistentDataAdapterContext context
     ) {
         Boolean present = primitive.get(presentKey, PersistentDataType.BOOLEAN);
         if (present == null || !present) {

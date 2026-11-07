@@ -6,9 +6,7 @@ import me.adamix.lte.definition.template.LoreTemplateDefinition;
 import me.adamix.lte.definition.template.TemplateElement;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
-import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,16 +17,16 @@ public class LoreRenderer {
     private final GroupService groupService;
 
     public LoreRenderer(
-            @NotNull VariableService variableService,
-            @NotNull GroupService groupService
+            VariableService variableService,
+            GroupService groupService
     ) {
         this.variableService = variableService;
         this.groupService = groupService;
     }
 
-    public @NotNull List<Component> render(
-            @NotNull LoreTemplateDefinition template,
-            @NotNull ItemStack itemStack
+    public List<Component> render(
+            LoreTemplateDefinition template,
+            ItemStack itemStack
     ) {
         List<Component> lore = new ArrayList<>();
 
@@ -67,9 +65,9 @@ public class LoreRenderer {
                     lore.add(LTEPlugin.MINI_MESSAGE.deserialize("<!italic><white>" + finalValue));
                 }
                 case TemplateElement.Group(
-                        @NotNull String name,
-                        @NotNull String each,
-                        @NotNull TemplateElement.Group.Empty empty,
+                        String name,
+                        String each,
+                        TemplateElement.Group.Empty empty,
                         boolean inline,
                         Optional<String> joiner,
                         FileSpan ignored
@@ -87,19 +85,19 @@ public class LoreRenderer {
         return lore;
     }
 
-    private boolean shouldRender(@NotNull Optional<String> collapseIfEmptyGroup, @NotNull ItemStack itemStack) {
+    private boolean shouldRender(Optional<String> collapseIfEmptyGroup, ItemStack itemStack) {
         if (collapseIfEmptyGroup.isEmpty()) return true;
         return !groupService.resolve(collapseIfEmptyGroup.get(), itemStack).isEmpty();
     }
 
     private void renderGroup(
-            @NotNull List<Component> lore,
-            @NotNull String name,
-            @NotNull String each,
-            @NotNull TemplateElement.Group.Empty empty,
+            List<Component> lore,
+            String name,
+            String each,
+            TemplateElement.Group.Empty empty,
             boolean inline,
-            @NotNull Optional<String> joiner,
-            @NotNull ItemStack itemStack
+            Optional<String> joiner,
+            ItemStack itemStack
     ) {
         ResolvedGroup resolved = groupService.resolve(name, itemStack);
 

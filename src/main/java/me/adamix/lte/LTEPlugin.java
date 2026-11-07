@@ -4,6 +4,7 @@ import co.aikar.commands.PaperCommandManager;
 import me.adamix.kidl.config.DiagnosticsConfig;
 import me.adamix.kidl.diagnostic.Diagnostic;
 import me.adamix.kidl.render.AnsiRenderer;
+import me.adamix.lte.annotation.Initializer;
 import me.adamix.lte.api.LoreTemplateAPI;
 import me.adamix.lte.api.exception.ConfigurationException;
 import me.adamix.lte.command.LTECommand;
@@ -107,14 +108,15 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
     }
 
     private static void renderDiagnostics(
-            @NotNull List<Diagnostic> diagnostics,
-            @NotNull List<Path> files
+            List<Diagnostic> diagnostics,
+            List<Path> files
     ) {
         var sources = new HashMap<String, List<String>>();
         for (Path file : files) {
             try {
                 sources.put(file.toString(), Files.readString(file).lines().toList());
-            } catch (IOException ignored) {
+            } catch (IOException _) {
+                // unreadable file: render diagnostics without source lines for it
             }
         }
 
@@ -122,6 +124,7 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
     }
 
     @Override
+    @Initializer
     public void onEnable() {
         saveResource("templates.kdl", false);
         saveResource("variables.kdl", false);
@@ -215,14 +218,18 @@ public class LTEPlugin extends JavaPlugin implements LoreTemplateAPI {
     public void apply(@NotNull ItemStack itemStack, @NotNull String templateId) {
         try {
             templateService.apply(templateId, itemStack);
-        } catch (NoSuchElementException _) {}
+        } catch (NoSuchElementException _) {
+            // Unknown template id: leave the item untouched instead of failing the caller
+        }
     }
 
     @Override
     public void rebuild(@NotNull ItemStack itemStack) {
         try {
             templateService.rebuild(itemStack);
-        } catch (NoSuchElementException _) {}
+        } catch (NoSuchElementException _) {
+            // Unknown template id: leave the item untouched instead of failing the caller
+        }
     }
 
     @Override

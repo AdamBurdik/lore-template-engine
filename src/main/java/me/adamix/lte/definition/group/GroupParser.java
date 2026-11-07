@@ -11,7 +11,6 @@ import me.adamix.kidl.view.ChildKind;
 import me.adamix.lte.LteErrors;
 import me.adamix.lte.api.exception.ConfigurationException;
 import org.bukkit.inventory.EquipmentSlotGroup;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -53,7 +52,7 @@ public class GroupParser {
         }
     }
 
-    public @NotNull List<GroupDefinition> parseFile(@NotNull Path path) throws IOException {
+    public List<GroupDefinition> parseFile(Path path) throws IOException {
         List<GroupDefinition> definitions = new ArrayList<>();
         Map<String, FileSpan> spans = new HashMap<>();
 
@@ -88,7 +87,7 @@ public class GroupParser {
         return List.copyOf(definitions);
     }
 
-    private @Nullable GroupDefinition parseGroup(@NotNull Cursor cursor, @NotNull Context ctx) {
+    private @Nullable GroupDefinition parseGroup(Cursor cursor, Context ctx) {
         String groupName = cursor.arguments().getString(0);
         if (groupName == null) return null;
 
@@ -115,7 +114,6 @@ public class GroupParser {
         if (builtinCursor != null) {
             builtin = parseBuiltin(builtinCursor, ctx);
         }
-
         String sourceId = null;
         String pdcKey = null;
         if (sourceCursor != null) {
@@ -155,7 +153,7 @@ public class GroupParser {
                         ctx,
                         LteErrors.GROUP_TRANSFORMER_KEY_REQUIRED,
                         "group `" + groupName + "` uses a transformer with a builtin source but has no `key`",
-                        transformerCursor.span(),
+                        transformer.span(),
                         "add `key=\"...\"` to the `transformer` child"
                 );
                 return null;
@@ -199,7 +197,7 @@ public class GroupParser {
                     ctx,
                     LteErrors.GROUP_TRANSFORMER_KEY_UNEXPECTED,
                     "group `" + groupName + "` uses a transformer with a PDC source and a `key`",
-                    transformerCursor.span(),
+                    transformer.span(),
                     "remove `key`; PDC groups transform their stored values directly"
             );
             return null;
@@ -213,8 +211,8 @@ public class GroupParser {
     }
 
     private @Nullable GroupDefinition.Source.Builtin parseBuiltin(
-            @NotNull Cursor builtinCursor,
-            @NotNull Context ctx
+            Cursor builtinCursor,
+            Context ctx
     ) {
         String builtinName = builtinCursor.arguments().getString(0);
         if (builtinName == null) return null;
@@ -237,18 +235,18 @@ public class GroupParser {
         return new GroupDefinition.Source.Builtin(builtinName, slot);
     }
 
-    private static @Nullable String normalizeSlot(@NotNull String raw) {
+    private static @Nullable String normalizeSlot(String raw) {
         String key = raw.trim().toLowerCase(Locale.ROOT).replace("-", "").replace("_", "");
         EquipmentSlotGroup group = EquipmentSlotGroup.getByName(key);
         return group != null ? group.toString() : null;
     }
 
     private static void report(
-            @NotNull Context ctx,
-            @NotNull DiagnosticError error,
-            @NotNull String message,
-            @NotNull FileSpan span,
-            @NotNull String label
+            Context ctx,
+            DiagnosticError error,
+            String message,
+            FileSpan span,
+            String label
     ) {
         ctx.addDiagnostic(Diagnostic.of(error, message, span, label));
     }

@@ -6,7 +6,6 @@ import me.adamix.lte.api.LoreTemplateAPI;
 import me.adamix.lte.definition.variable.VariableValue;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
@@ -18,14 +17,14 @@ public class LTEMechanic extends Mechanic {
     private final Config config;
 
     public LTEMechanic(
-            @NotNull MechanicFactory factory,
-            @NotNull ConfigurationSection section
+            MechanicFactory factory,
+            ConfigurationSection section
     ) {
         super(factory, section);
         this.config = Config.parse(section);
     }
 
-    public void applyTo(@NotNull LoreTemplateAPI api, @NotNull ItemStack item) {
+    public void applyTo(LoreTemplateAPI api, ItemStack item) {
         if (config.isApplicable(api)) config.applyTo(api, item);
     }
 

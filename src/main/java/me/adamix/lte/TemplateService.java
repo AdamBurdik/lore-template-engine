@@ -10,7 +10,6 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
 import java.util.List;
@@ -20,33 +19,27 @@ import java.util.Set;
 
 @SuppressWarnings("UnstableApiUsage")
 public class TemplateService {
-    private final LTEPlugin plugin;
     private final Registry<LoreTemplateDefinition> registry;
-    private final VariableService variableService;
-    private final GroupService groupService;
     private final LoreRenderer renderer;
 
     public final NamespacedKey pdcKey;
 
     public TemplateService(
-            @NotNull LTEPlugin plugin,
-            @NotNull Registry<LoreTemplateDefinition> registry,
-            @NotNull VariableService variableService,
-            @NotNull GroupService groupService
+            LTEPlugin plugin,
+            Registry<LoreTemplateDefinition> registry,
+            VariableService variableService,
+            GroupService groupService
     ) {
-        this.plugin = plugin;
         this.registry = registry;
-        this.variableService = variableService;
-        this.groupService = groupService;
         this.pdcKey = new NamespacedKey(plugin, "template_id");
         this.renderer = new LoreRenderer(variableService, groupService);
     }
     
-    public @NotNull Optional<String> getTemplateId(@NotNull ItemStack itemStack) {
+    public Optional<String> getTemplateId(ItemStack itemStack) {
         return Optional.ofNullable(itemStack.getPersistentDataContainer().get(pdcKey, PersistentDataType.STRING));
     }
 
-    public void rebuild(@NotNull ItemStack itemStack) {
+    public void rebuild(ItemStack itemStack) {
         var pdc = itemStack.getPersistentDataContainer();
         String templateId = pdc.get(pdcKey, PersistentDataType.STRING);
         if (templateId == null) return;
@@ -54,7 +47,7 @@ public class TemplateService {
         apply(templateId, itemStack);
     }
     
-    public @NotNull List<Component> render(@NotNull ItemStack itemStack, @NotNull String templateId) {
+    public List<Component> render(ItemStack itemStack, String templateId) {
         var opt = registry.get(templateId);
         if (opt.isEmpty()) {
             return Collections.emptyList();
@@ -65,8 +58,8 @@ public class TemplateService {
     }
 
     public void apply(
-            @NotNull String templateId,
-            @NotNull ItemStack itemStack
+            String templateId,
+            ItemStack itemStack
     ) {
         var opt = registry.get(templateId);
         if (opt.isEmpty()) {
@@ -104,7 +97,7 @@ public class TemplateService {
         }
     }
     
-    public void clear(@NotNull ItemStack itemStack) {
+    public void clear(ItemStack itemStack) {
         throw new NotImplementedException("TemplateService#clear not implemented yet");
     }
 }

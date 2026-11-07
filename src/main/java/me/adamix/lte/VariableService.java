@@ -11,7 +11,6 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -25,10 +24,10 @@ public class VariableService {
     private final TransformerService transformerService;
 
     public VariableService(
-            @NotNull LTEPlugin plugin,
-            @NotNull Registry<VariableDefinition> variableRegistry,
-            @NotNull Map<String, ComputedFunction> computedFunctions,
-            @NotNull TransformerService transformerService
+            LTEPlugin plugin,
+            Registry<VariableDefinition> variableRegistry,
+            Map<String, ComputedFunction> computedFunctions,
+            TransformerService transformerService
     ) {
         this.plugin = plugin;
         this.variableRegistry = variableRegistry;
@@ -36,9 +35,9 @@ public class VariableService {
         this.transformerService = transformerService;
     }
 
-    public @NotNull Optional<VariableValue> getRawValue(
-            @NotNull String name,
-            @NotNull ItemStack itemStack
+    public Optional<VariableValue> getRawValue(
+            String name,
+            ItemStack itemStack
     ) {
         VariableDefinition definition = variableRegistry.get(name)
                 .orElseThrow(() -> new NoSuchElementException("No variable definition registered with name " + name));
@@ -64,9 +63,9 @@ public class VariableService {
         };
     }
 
-    public @NotNull Optional<ResolvedVariable> resolve(
-            @NotNull String name,
-            @NotNull ItemStack itemStack
+    public Optional<ResolvedVariable> resolve(
+            String name,
+            ItemStack itemStack
     ) {
         Optional<VariableValue> raw = getRawValue(name, itemStack);
         if (raw.isEmpty()) return Optional.empty();
@@ -89,8 +88,8 @@ public class VariableService {
     }
 
     public record ResolvedVariable(
-            @NotNull String raw,
-            @NotNull Map<String, String> fields
+            String raw,
+            Map<String, String> fields
     ) {
         public ResolvedVariable {
             fields = Map.copyOf(fields);
@@ -98,9 +97,9 @@ public class VariableService {
     }
 
     public void setValue(
-            @NotNull ItemStack itemStack,
-            @NotNull String name,
-            @NotNull VariableValue value
+            ItemStack itemStack,
+            String name,
+            VariableValue value
     ) {
         VariableDefinition definition = variableRegistry.get(name)
                 .orElseThrow(() -> new NoSuchElementException("No variable definition registered with name " + name));
@@ -118,10 +117,10 @@ public class VariableService {
         itemStack.editMeta(meta -> writeTyped(meta.getPersistentDataContainer(), namespacedKey, value));
     }
 
-    private @NotNull VariableValue readTyped(
-            @NotNull PersistentDataContainerView pdc,
-            @NotNull NamespacedKey key,
-            @NotNull PdcValueType type
+    private VariableValue readTyped(
+            PersistentDataContainerView pdc,
+            NamespacedKey key,
+            PdcValueType type
     ) {
         return switch (type) {
             case INT -> {
@@ -147,16 +146,16 @@ public class VariableService {
         };
     }
 
-    private static @NotNull IllegalStateException missingValue(@NotNull NamespacedKey key, @NotNull PdcValueType type) {
+    private static IllegalStateException missingValue(NamespacedKey key, PdcValueType type) {
         return new IllegalStateException(
                 "PDC key '" + key + "' has no " + type + " value, even though pdc.has(key) was true. "
                         + "Likely stored under a different PersistentDataType than declared");
     }
 
     private void writeTyped(
-            @NotNull PersistentDataContainer pdc,
-            @NotNull NamespacedKey key,
-            @NotNull VariableValue value
+            PersistentDataContainer pdc,
+            NamespacedKey key,
+            VariableValue value
     ) {
         switch (value) {
             case VariableValue.IntValue(int v) -> pdc.set(key, PersistentDataType.INTEGER, v);
@@ -166,7 +165,7 @@ public class VariableService {
         }
     }
 
-    private static boolean matchesType(@NotNull VariableValue value, @NotNull PdcValueType type) {
+    private static boolean matchesType(VariableValue value, PdcValueType type) {
         return switch (type) {
             case INT -> value instanceof VariableValue.IntValue;
             case DOUBLE -> value instanceof VariableValue.DoubleValue;
@@ -175,7 +174,7 @@ public class VariableService {
         };
     }
 
-    public static @NotNull VariableValue parseTyped(@NotNull String raw, @NotNull PdcValueType type) {
+    public static VariableValue parseTyped(String raw, PdcValueType type) {
         return switch (type) {
             case INT -> new VariableValue.IntValue(Integer.parseInt(raw));
             case DOUBLE -> new VariableValue.DoubleValue(Double.parseDouble(raw));

@@ -2,7 +2,6 @@ package me.adamix.lte;
 
 import me.adamix.kidl.error.DiagnosticError;
 import me.adamix.kidl.error.Severity;
-import org.jetbrains.annotations.NotNull;
 
 public final class LteErrors {
     private LteErrors() {}
@@ -36,7 +35,7 @@ public final class LteErrors {
             UNKNOWN_TRANSFORMER_FIELD = error("UNKNOWN_TRANSFORMER_FIELD"),
             INVALID_BUILTIN_TRANSFORMER_FIELD = error("INVALID_BUILTIN_TRANSFORMER_FIELD");
 
-    private static DiagnosticError error(@NotNull String path) {
+    private static DiagnosticError error(String path) {
         return new DiagnosticError("lte", path, Severity.ERROR);
     }
 }

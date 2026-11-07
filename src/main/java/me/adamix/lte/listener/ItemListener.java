@@ -17,9 +17,9 @@ import org.bukkit.event.inventory.PrepareSmithingEvent;
 import org.bukkit.event.player.PlayerItemMendEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Locale;
 import java.util.Map;
 
 @RequiredArgsConstructor
@@ -60,7 +60,7 @@ public class ItemListener implements Listener {
         event.getInventory().setResult(result);
     }
 
-    private @Nullable ItemStack findTemplatedIngredient(@Nullable ItemStack @NotNull [] matrix) {
+    private @Nullable ItemStack findTemplatedIngredient(ItemStack [] matrix) {
         for (ItemStack ingredient : matrix) {
             if (ingredient == null) continue;
             if (ingredient.getType().isAir()) continue;
@@ -74,7 +74,7 @@ public class ItemListener implements Listener {
         return null;
     }
 
-    private void copyLoreData(@NotNull ItemStack from, @NotNull ItemStack to) {
+    private void copyLoreData(ItemStack from, ItemStack to) {
         if (!from.hasItemMeta()) return;
 
         var fromPdc = from.getItemMeta().getPersistentDataContainer();
@@ -82,7 +82,7 @@ public class ItemListener implements Listener {
         to.editMeta(meta -> {
             var toPdc = meta.getPersistentDataContainer();
             for (NamespacedKey key : fromPdc.getKeys()) {
-                if (!key.getNamespace().equals(plugin.getName().toLowerCase())) continue;
+                if (!key.getNamespace().equals(plugin.getName().toLowerCase(Locale.ROOT))) continue;
 
                 String value = fromPdc.get(key, PersistentDataType.STRING);
                 if (value != null) {

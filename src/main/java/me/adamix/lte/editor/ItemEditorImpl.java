@@ -7,8 +7,8 @@ import me.adamix.lte.VariableService;
 import me.adamix.lte.api.LoreTemplateAPI;
 import me.adamix.lte.definition.variable.VariableValue;
 import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 
 import java.util.HashMap;
 import java.util.List;
@@ -16,28 +16,28 @@ import java.util.Map;
 
 @RequiredArgsConstructor
 public final class ItemEditorImpl implements LoreTemplateAPI.ItemEditor {
-    private final @NotNull ItemStack itemStack;
-    private final @NotNull TemplateService templateService;
-    private final @NotNull VariableService variableService;
-    private final @NotNull GroupService groupService;
+    private final ItemStack itemStack;
+    private final TemplateService templateService;
+    private final VariableService variableService;
+    private final GroupService groupService;
     private @Nullable String templateId;
-    private final @NotNull Map<String, VariableValue> variables = new HashMap<>(0);
-    private final @NotNull Map<String, List<String>> groups = new HashMap<>(0);
+    private final Map<String, VariableValue> variables = new HashMap<>(0);
+    private final Map<String, List<String>> groups = new HashMap<>(0);
 
     @Override
-    public @NotNull LoreTemplateAPI.ItemEditor template(@NotNull String templateId) {
+    public LoreTemplateAPI.@NonNull ItemEditor template(@NonNull String templateId) {
         this.templateId = templateId;
         return this;
     }
 
     @Override
-    public @NotNull LoreTemplateAPI.ItemEditor variable(@NotNull String variable, @NotNull VariableValue value) {
+    public LoreTemplateAPI.@NonNull ItemEditor variable(@NonNull String variable, @NonNull VariableValue value) {
         variables.put(variable, value);
         return this;
     }
 
     @Override
-    public @NotNull LoreTemplateAPI.ItemEditor group(@NotNull String group, @NotNull List<String> values) {
+    public LoreTemplateAPI.@NonNull ItemEditor group(@NonNull String group, @NonNull List<String> values) {
         groups.put(group, values);
         return this;
     }

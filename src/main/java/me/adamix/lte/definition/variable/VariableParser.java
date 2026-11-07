@@ -11,7 +11,6 @@ import me.adamix.kidl.view.ChildKind;
 import me.adamix.kidl.view.Properties;
 import me.adamix.lte.LteErrors;
 import me.adamix.lte.api.exception.ConfigurationException;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -50,7 +49,7 @@ public class VariableParser {
         }
     }
 
-    public @NotNull List<VariableDefinition> parseFile(@NotNull Path path) throws IOException {
+    public List<VariableDefinition> parseFile(Path path) throws IOException {
         List<VariableDefinition> definitions = new ArrayList<>();
         Map<String, FileSpan> spans = new HashMap<>();
 
@@ -82,7 +81,7 @@ public class VariableParser {
         return List.copyOf(definitions);
     }
 
-    private @Nullable VariableDefinition parseVariable(@NotNull Cursor cursor, @NotNull Context ctx) {
+    private @Nullable VariableDefinition parseVariable(Cursor cursor, Context ctx) {
         String variableName = cursor.arguments().getString(0);
         if (variableName == null) return null;
 
@@ -110,8 +109,8 @@ public class VariableParser {
     }
 
     private @Nullable VariableDefinition.Source parseSource(
-            @NotNull Cursor sourceCursor,
-            @NotNull Context ctx
+            Cursor sourceCursor,
+            Context ctx
     ) {
         String sourceId = sourceCursor.arguments().getString(0);
         if (sourceId == null) return null;
@@ -136,8 +135,8 @@ public class VariableParser {
     }
 
     private @Nullable VariableDefinition.Source parsePdcSource(
-            @NotNull Cursor sourceCursor,
-            @NotNull Context ctx
+            Cursor sourceCursor,
+            Context ctx
     ) {
         Properties properties = sourceCursor.properties();
 
@@ -167,7 +166,7 @@ public class VariableParser {
         return new VariableDefinition.Source.Pdc(key, type, defaultValue);
     }
 
-    private @Nullable VariableDefinition.Source parseComputedSource(@NotNull Cursor sourceCursor) {
+    private @Nullable VariableDefinition.Source parseComputedSource(Cursor sourceCursor) {
         String fn = sourceCursor.properties().getString("fn");
         VariableValue defaultValue = sourceCursor.properties().optString("default")
                 .map(value -> VariableValue.of(value))
@@ -179,8 +178,8 @@ public class VariableParser {
     }
 
     private @Nullable VariableValue parseDefault(
-            @NotNull Properties properties,
-            @NotNull PdcValueType type
+            Properties properties,
+            PdcValueType type
     ) {
         return switch (type) {
             case INT -> properties.optInt("default")
@@ -199,11 +198,11 @@ public class VariableParser {
     }
 
     private static void report(
-            @NotNull Context ctx,
-            @NotNull DiagnosticError error,
-            @NotNull String message,
-            @NotNull FileSpan span,
-            @NotNull String label
+            Context ctx,
+            DiagnosticError error,
+            String message,
+            FileSpan span,
+            String label
     ) {
         ctx.addDiagnostic(Diagnostic.of(error, message, span, label));
     }
